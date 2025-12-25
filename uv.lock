@@ -288,6 +288,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-unfold"
+version = "0.74.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/78/88/d98c21ed315e5cb025f45aaea1e95d35c0fd11fb9123cb4c1278c33e70ad/django_unfold-0.74.1.tar.gz", hash = "sha256:573f793f975b9dbe324859121a179ae3f4d600d580e28e038736d7a2696e86dc", size = 1103394, upload-time = "2025-12-15T17:06:36Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2d/21/1c5482019bf2b454ac3e67cf0de456eb3dccc2f478a865a2f8a4fba28ef7/django_unfold-0.74.1-py3-none-any.whl", hash = "sha256:0b0a4b13c568309f3bb0a14d5bd7353b47b676d97695954d9631245df84e18f3", size = 1217338, upload-time = "2025-12-15T17:06:34.418Z" },
+]
+
+[[package]]
 name = "djangorestframework"
 version = "3.16.1"
 source = { registry = "https://pypi.org/simple" }
@@ -772,6 +784,7 @@ dependencies = [
     { name = "django-extensions" },
     { name = "django-jazzmin" },
     { name = "django-stubs" },
+    { name = "django-unfold" },
     { name = "djangorestframework" },
     { name = "djangorestframework-simplejwt" },
     { name = "djangorestframework-stubs" },
@@ -789,6 +802,7 @@ requires-dist = [
     { name = "django-extensions", specifier = ">=4.1" },
     { name = "django-jazzmin", specifier = ">=3.0.1" },
     { name = "django-stubs", specifier = ">=5.2.8" },
+    { name = "django-unfold", specifier = ">=0.74.1" },
     { name = "djangorestframework", specifier = ">=3.16.1" },
     { name = "djangorestframework-simplejwt", specifier = ">=5.5.1" },
     { name = "djangorestframework-stubs", specifier = ">=3.16.6" },

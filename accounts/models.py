@@ -52,6 +52,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name"]
 
+    # a username property for compatibility with some django packages
+    @property
+    def username(self):
+        return self.email  # simply return email as username
+
     def save(self, *args, **kwargs):
         """
         Ensure the profile image filename uses the instance id.
