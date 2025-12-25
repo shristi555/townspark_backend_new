@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "django_extensions",
     # Local apps
     "accounts",
+    "issues",
 ]
 
 MIDDLEWARE = [
