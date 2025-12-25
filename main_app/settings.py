@@ -129,10 +129,16 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 # REST Framework Configuration
 REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": (
+        # our custom SRE global renderer
+        "core.renderers.GlobalResponseRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "EXCEPTION_HANDLER": "core.exceptions.global_exception_handler",
 }
 
 SIMPLE_JWT = {
