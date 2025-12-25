@@ -92,40 +92,28 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         email = attrs.get("email")
         password = attrs.get("password")
-
-        if not email:
-            raise serializers.ValidationError({"email": "Email is required."})
-
-        if not password:
-            raise serializers.ValidationError({"password": "Password is required."})
-
         User = get_user_model()
 
+        # Check if email exists
         try:
-            user = User.objects.get(email=email)
+            user_obj = User.objects.get(email=email)
         except User.DoesNotExist:
             raise serializers.ValidationError({"email": "User not found."})
 
-        if not user.is_active:
+        if not user_obj.is_active:
             raise serializers.ValidationError({"detail": "Account is inactive."})
 
-        # 🔥 THIS is the only authentication call
-        user = authenticate(
-            request=self.context.get("request"),
-            email=email,
-            password=password,
-        )
-
-        if not user:
+        # passowrd check is handled by super class
+        # super().validate(attrs)
+        # if we pass wrong password it will raise ValidationError
+        try:
+            data = super().validate(attrs)
+        except serializers.ValidationError:
+            # If parent fails, it means the password was wrong
+            # (since we already checked email exists above) only possible failure is in password
             raise serializers.ValidationError({"password": "Invalid credentials."})
 
-        # call parent to generate token
-        data = super().validate(attrs)
-
-        # Optional: include user data
-        data["user"] = {
-            "id": user.id,
-            "email": user.email,
-        }
+        # 3. Add Custom Data
+        data["user"] = user_obj.get_user_info()
 
         return data

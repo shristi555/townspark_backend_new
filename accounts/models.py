@@ -81,3 +81,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    # helper method to get user info dictonary with selected fields
+    def get_user_info(self):
+        return {
+            "id": self.id,
+            "email": self.email,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "full_name": f"{self.first_name} {self.last_name}".strip(),
+            "phone_number": self.phone_number,
+            "profile_pic": self.profile_pic.url if self.profile_pic else None,
+        }
