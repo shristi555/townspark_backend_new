@@ -2,10 +2,7 @@ from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from rest_framework import serializers
 from .models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
-from rest_framework import serializers
-
 
 def base_name_validator(value, field_name):
     #     we use regex to allow only letters, numbers, underscores, and hyphens in the base name
@@ -88,6 +85,7 @@ class UserSerializer(serializers.ModelSerializer):
         return profile_pic_url
 
 
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         email = attrs.get("email")
@@ -117,3 +115,4 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data["user"] = user_obj.get_user_info()
 
         return data
+

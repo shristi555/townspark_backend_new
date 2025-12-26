@@ -31,6 +31,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+CORS_ALLOWED_ORIGINS = ["*"]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_CREDENTIALS = True
+
 DEBUG = True
 
 LOGGING = {
@@ -49,8 +55,8 @@ LOGGING = {
 # Application definition
 
 INSTALLED_APPS = [
-    "jazzmin",
-    # "unfold",
+    # "jazzmin",
+    "unfold",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -137,7 +143,8 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.BrowsableAPIRenderer",
     ),
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "accounts.auth.CustomJWTAuthentication",
+        # "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "EXCEPTION_HANDLER": "core.exceptions.global_exception_handler",
@@ -149,6 +156,14 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
+    
+    # Custom Cookie Settings
+    "AUTH_COOKIE": "townspark_access_token",
+    "AUTH_COOKIE_REFRESH": "townspark_refresh_token",
+    "AUTH_COOKIE_SECURE": False, # Set to True in production (HTTPS)
+    "AUTH_COOKIE_HTTP_ONLY": True, # Prevents JS from reading the cookie (XSS protection)
+    "AUTH_COOKIE_PATH": "/",
+    "AUTH_COOKIE_SAMESITE": "Lax",
 }
 
 DJOSER = {
@@ -174,43 +189,46 @@ USE_I18N = True
 USE_TZ = True
 STATIC_URL = "static/"
 
-JAZZMIN_SETTINGS = {
-    "show_ui_builder": True,
-    "site_title": "My Project Admin",
-    "site_header": "My Project",
-    "welcome_sign": "Welcome to My Project Admin",
-    "theme": "darkly",
-}
-
-
-JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": False,
-    "footer_small_text": False,
-    "body_small_text": False,
-    "brand_small_text": False,
-    "brand_colour": False,
-    "accent": "accent-info",
-    "navbar": "navbar-dark",
-    "no_navbar_border": False,
-    "navbar_fixed": False,
-    "layout_boxed": False,
-    "footer_fixed": False,
-    "sidebar_fixed": False,
-    "sidebar": "sidebar-dark-primary",
-    "sidebar_nav_small_text": False,
-    "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": False,
-    "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": False,
-    "sidebar_nav_flat_style": False,
-    "theme": "cyborg",
-    "dark_mode_theme": "cyborg",
-    "button_classes": {
-        "primary": "btn-primary",
-        "secondary": "btn-secondary",
-        "info": "btn-info",
-        "warning": "btn-warning",
-        "danger": "btn-danger",
-        "success": "btn-success",
+# Unfold Admin Configuration
+UNFOLD = {
+    "SITE_TITLE": "Townspark Admin",
+    "SITE_HEADER": "Townspark",
+    "SITE_URL": "/",
+    # "SITE_ICON": {
+    #     "light": lambda request: static("images/logo-light.svg"),  # light mode
+    #     "dark": lambda request: static("images/logo-dark.svg"),  # dark mode
+    # },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": "Navigation",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Dashboard",
+                        "icon": "dashboard",
+                        "link": "admin:index",
+                    },
+                ],
+            },
+            {
+                "title": "Management",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Users",
+                        "icon": "people",
+                        "link": "admin:accounts_user_changelist",
+                    },
+                    {
+                        "title": "Issues Feed",
+                        "icon": "view_agenda",
+                        "link": "admin:issues_issue_changelist",
+                    },
+                ],
+            },
+        ],
     },
 }

@@ -34,9 +34,9 @@ class GlobalResponseRenderer(JSONRenderer):
 
             if isinstance(data, dict):
                 # DRF usually puts the main error in 'detail'
-                message = data.get("detail", data.get("message", "Validation Error"))
+                message = data.get("detail", data.get("message", "Unknown Server side Error"))
             elif isinstance(data, list):
-                message = "Multiple validation errors occurred"
+                message = "Multiple unknown errors occurred"
 
             wrapped_data = {
                 "success": False,
