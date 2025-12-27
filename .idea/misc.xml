@@ -7,7 +7,13 @@
   <component name="PyPackaging">
     <option name="earlyReleasesAsUpgrades" value="true" />
   </component>
+  <component name="PyrightConfiguration">
+    <option name="inlayHints" value="false" />
+  </component>
   <component name="RuffConfiguration">
+    <option name="enabled" value="true" />
+  </component>
+  <component name="TyConfiguration">
     <option name="enabled" value="true" />
   </component>
 </project>

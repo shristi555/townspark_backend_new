@@ -9,9 +9,6 @@ from accounts.views import (
 )
 from accounts.update.views import (
     UpdateProfilePictureView,
-    ProfileUpdateView,
-    PasswordUpdateView,
-    FirstNameUpdateView,
 )
 
 urlpatterns = [
