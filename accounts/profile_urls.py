@@ -20,13 +20,11 @@ urlpatterns = [
     ),
     path("logout/", LogoutView.as_view(), name="logout"),
     path(
-        "/update/profile_pic/",
+        "update/profile_pic/",
         UpdateProfilePictureView.as_view(),
         name="update_profile_pic",
     ),
-    path("/update/", ProfileUpdateView.as_view(), name="update_profile"),
-    path("/update/password/", PasswordUpdateView.as_view(), name="update_password"),
-    path(
-        "/update/first_name/", FirstNameUpdateView.as_view(), name="update_first_name"
-    ),
+    path("update/", ProfileUpdateView.as_view(), name="update_profile"),
+    path("update/password/", PasswordUpdateView.as_view(), name="update_password"),
+    path("update/first_name/", FirstNameUpdateView.as_view(), name="update_first_name"),
 ]
