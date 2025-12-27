@@ -25,16 +25,18 @@ class BaseTimedModel(models.Model):
 class Issue(BaseTimedModel):
     title = models.CharField(max_length=255)
     description = models.TextField()
-    is_resolved = models.BooleanField(default=False, blank=True)
+    is_resolved = models.BooleanField(default=False, blank=True, db_index=True)
 
     # for now the issue catregory will be a simple char field
     # but in future we will make it a foreign key to a separate IssueCategory model
-    category = models.CharField(max_length=100, blank=True, null=True)
+    category = models.CharField(max_length=100, blank=True, null=True, db_index=True)
 
     # this will be a foreign key to the user model in accounts app
     reported_by = models.ForeignKey(
         "accounts.User", related_name="reported_issues", on_delete=models.CASCADE
     )
+
+    address = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return self.title

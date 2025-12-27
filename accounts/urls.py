@@ -6,6 +6,7 @@ from accounts.views import (
     CustomTokenRefreshView,
     LogoutView,
     CustomTokenVerifyView,
+    CustomSignupViewSet,
 )
 from accounts.update.views import (
     UpdateProfilePictureView,
@@ -13,7 +14,7 @@ from accounts.update.views import (
 
 urlpatterns = [
     # Auth
-    path("register/", UserViewSet.as_view({"post": "create"}), name="register"),
+    path("register/", CustomSignupViewSet.as_view({"post": "create"}), name="register"),
     path("login/", CustomTokenObtainView.as_view(), name="login"),
     # Token management
     path("token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh"),

@@ -1,3 +1,4 @@
+from djoser.views import UserViewSet
 from accounts.serializers import CustomTokenObtainPairSerializer
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -11,6 +12,24 @@ from rest_framework.response import Response
 
 
 # Create your views here.
+class CustomSignupViewSet(UserViewSet):
+    """
+    Custom signup viewset to handle user registration.
+
+    it uses djoser's UserViewSet as a base.
+
+    for now we will see if the user already is authenticated and prevent re-registration.
+    """
+
+    def create(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return Response(
+                {"detail": "User is already logged in. You need to logout first."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().create(request, *args, **kwargs)
+
+
 class CustomTokenObtainView(TokenObtainPairView):
     """
      Custom view to handle user login with additional checks:
