@@ -23,6 +23,15 @@ class CustomTokenObtainView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
+
+        # checks are handled in serializer
+        if request.user.is_authenticated:
+            return Response(
+                {"detail": "User is already logged in. You need to logout first."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
         response = super().post(request, *args, **kwargs)
 
         if response.status_code == status.HTTP_200_OK:
@@ -61,7 +70,14 @@ class CustomTokenRefreshView(TokenRefreshView):
     """
     def post(self, request, *args, **kwargs):
         # Try to get refresh token from cookie
-        refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
+        refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'], None)
+        
+        if refresh_token is None:
+            refresh_token = request.data.get('refresh', None)
+        
+        if refresh_token is None:
+            return Response({"detail": "Refresh token not found."}, status=status.HTTP_400_BAD_REQUEST)
+
         
         if refresh_token:
             request.data['refresh'] = refresh_token
@@ -102,13 +118,18 @@ class CustomTokenVerifyView(TokenVerifyView):
     def post(self, request, *args, **kwargs):
         # Try to get token from cookie if not in body
         if 'token' not in request.data:
-            token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE'])
-            if token:
-                request.data['token'] = token
+            access_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE'])
+            
+            if not access_token:
+                return Response(
+                    {"detail": "No access token provided."},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            # Make request.data mutable and add token
+            request._full_data = {'token': access_token}
         
         return super().post(request, *args, **kwargs)
-
-
 
 class LogoutView(APIView):
     """

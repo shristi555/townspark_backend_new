@@ -96,7 +96,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         try:
             user_obj = User.objects.get(email=email)
         except User.DoesNotExist:
-            raise serializers.ValidationError({"email": "User not found."})
+            raise serializers.ValidationError({
+                "detail" : {"email": f"Provided email \"{email}\" not found. "}
+            })
 
         if not user_obj.is_active:
             raise serializers.ValidationError({"detail": "Account is inactive."})
@@ -109,7 +111,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         except serializers.ValidationError:
             # If parent fails, it means the password was wrong
             # (since we already checked email exists above) only possible failure is in password
-            raise serializers.ValidationError({"password": "Invalid credentials."})
+            raise serializers.ValidationError({
+                "detail" : {"password": "Password is incorrect for given email."}
+            })
 
         # 3. Add Custom Data
         data["user"] = user_obj.get_user_info()

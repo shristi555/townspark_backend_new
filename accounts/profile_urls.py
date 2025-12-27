@@ -15,20 +15,18 @@ from accounts.update.views import (
 )
 
 urlpatterns = [
-    # Auth
-    path("register/", UserViewSet.as_view({"post": "create"}), name="register"),
-    path("login/", CustomTokenObtainView.as_view(), name="login"),
-    # Token management
-    path("token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh"),
-    path("token/verify/", CustomTokenVerifyView.as_view(), name="token_verify"),
-    # User info
     path(
         "me/", UserViewSet.as_view({"get": "me", "put": "me", "patch": "me"}), name="me"
     ),
+    path("logout/", LogoutView.as_view(), name="logout"),
     path(
-        "me/update/profile_pic/",
+        "/update/profile_pic/",
         UpdateProfilePictureView.as_view(),
         name="update_profile_pic",
     ),
-    path("logout/", LogoutView.as_view(), name="logout"),
+    path("/update/", ProfileUpdateView.as_view(), name="update_profile"),
+    path("/update/password/", PasswordUpdateView.as_view(), name="update_password"),
+    path(
+        "/update/first_name/", FirstNameUpdateView.as_view(), name="update_first_name"
+    ),
 ]
