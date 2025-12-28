@@ -63,10 +63,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # Third-party apps
-    
     "corsheaders",
     "rest_framework",
-
     "rest_framework.authtoken",
     "djoser",
     "rest_framework_simplejwt",
@@ -74,6 +72,7 @@ INSTALLED_APPS = [
     # Local apps
     "accounts",
     "issues",
+    "ping",
 ]
 
 MIDDLEWARE = [
@@ -149,7 +148,7 @@ REST_FRAMEWORK = {
         "accounts.auth.CustomJWTAuthentication",
         # "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",),
     "EXCEPTION_HANDLER": "core.exceptions.global_exception_handler",
 }
 
@@ -159,12 +158,11 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
-    
     # Custom Cookie Settings
     "AUTH_COOKIE": "townspark_access_token",
     "AUTH_COOKIE_REFRESH": "townspark_refresh_token",
-    "AUTH_COOKIE_SECURE": False, # Set to True in production (HTTPS)
-    "AUTH_COOKIE_HTTP_ONLY": True, # Prevents JS from reading the cookie (XSS protection)
+    "AUTH_COOKIE_SECURE": False,  # Set to True in production (HTTPS)
+    "AUTH_COOKIE_HTTP_ONLY": True,  # Prevents JS from reading the cookie (XSS protection)
     "AUTH_COOKIE_PATH": "/",
     "AUTH_COOKIE_SAMESITE": "Lax",
 }

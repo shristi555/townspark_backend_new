@@ -87,6 +87,8 @@ class CustomTokenObtainView(TokenObtainPairView):
     it is intended to give a detailed error response for each failure case. overriding the default behavior of djoser's TokenCreateView.
     """
 
+    permission_classes = [AllowAny]
+
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
