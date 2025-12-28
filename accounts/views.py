@@ -184,23 +184,97 @@ class CustomTokenRefreshView(TokenRefreshView):
 class CustomTokenVerifyView(TokenVerifyView):
     """
     Verifies token from cookie if not in request body.
+    If access token is invalid/expired, attempts to refresh using refresh token.
     """
 
-    def post(self, request, *args, **kwargs):
-        # Try to get token from cookie if not in body
-        if "token" not in request.data:
-            access_token = request.COOKIES.get(settings.SIMPLE_JWT["AUTH_COOKIE"])
+    permission_classes = [AllowAny]
 
-            if not access_token:
-                return Response(
-                    {"detail": "No access token provided."},
-                    status=status.HTTP_401_UNAUTHORIZED,
+    def post(self, request, *args, **kwargs):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+
+        # Try to get access token from cookie or body
+        access_token = request.data.get("token") or request.COOKIES.get(
+            settings.SIMPLE_JWT["AUTH_COOKIE"]
+        )
+
+        # Try to verify access token first
+        if access_token:
+            try:
+                # Make request.data mutable and add token
+                request._full_data = {"token": access_token}
+                response = super().post(request, *args, **kwargs)
+
+                # If verification successful, return success
+                if response.status_code == 200:
+                    return Response(
+                        {"detail": "Token is valid.", "refreshed": False},
+                        status=status.HTTP_200_OK,
+                    )
+            except (TokenError, InvalidToken):
+                # Access token is invalid/expired, try refresh token
+                pass
+
+        # Access token invalid/expired, try to refresh
+        refresh_token = request.COOKIES.get(
+            settings.SIMPLE_JWT["AUTH_COOKIE_REFRESH"]
+        ) or request.data.get("refresh")
+
+        if not refresh_token:
+            return Response(
+                {"detail": "No valid tokens provided. Please login again."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # Try to refresh tokens
+        try:
+            refresh = RefreshToken(refresh_token)
+            new_access_token = str(refresh.access_token)
+
+            # Create response with new tokens
+            response = Response(
+                {
+                    "detail": "Tokens refreshed successfully.",
+                    "refreshed": True,
+                    "access": new_access_token,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+            # Set new access token cookie
+            response.set_cookie(
+                key=settings.SIMPLE_JWT["AUTH_COOKIE"],
+                value=new_access_token,
+                expires=settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"],
+                secure=settings.SIMPLE_JWT["AUTH_COOKIE_SECURE"],
+                httponly=settings.SIMPLE_JWT["AUTH_COOKIE_HTTP_ONLY"],
+                samesite=settings.SIMPLE_JWT["AUTH_COOKIE_SAMESITE"],
+            )
+
+            # If refresh token rotation is enabled, set new refresh token
+            if settings.SIMPLE_JWT.get("ROTATE_REFRESH_TOKENS", False):
+                new_refresh_token = str(refresh)
+                response.data["refresh"] = new_refresh_token
+
+                response.set_cookie(
+                    key=settings.SIMPLE_JWT["AUTH_COOKIE_REFRESH"],
+                    value=new_refresh_token,
+                    expires=settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"],
+                    secure=settings.SIMPLE_JWT["AUTH_COOKIE_SECURE"],
+                    httponly=settings.SIMPLE_JWT["AUTH_COOKIE_HTTP_ONLY"],
+                    samesite=settings.SIMPLE_JWT["AUTH_COOKIE_SAMESITE"],
                 )
 
-            # Make request.data mutable and add token
-            request._full_data = {"token": access_token}
+            return response
 
-        return super().post(request, *args, **kwargs)
+        except (TokenError, InvalidToken):
+            # Both tokens are invalid
+            return Response(
+                {
+                    "detail": "Both access and refresh tokens are invalid. Please login again."
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
 
 class LogoutView(APIView):

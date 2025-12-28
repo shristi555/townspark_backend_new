@@ -24,6 +24,11 @@ class GlobalResponseRenderer(JSONRenderer):
         # Handle error responses
         else:
             error_field = self._extract_error_details(data)
+            # add status code to error field for backward compatibility
+            # also add a field called 'reached_server' to indicate that the request reached the server
+
+            error_field["status"] = status_code
+            error_field["reached_server"] = True
             wrapped_data = {
                 "success": False,
                 "response": None,
