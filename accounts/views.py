@@ -10,6 +10,53 @@ from rest_framework_simplejwt.views import TokenVerifyView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+from rest_framework.permissions import AllowAny
+
+
+class DebugSignupView(APIView):
+    """
+    Debug endpoint to see what's being received during signup.
+    Remove this in production!
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        print("=" * 50)
+        print("SIGNUP DEBUG INFO")
+        print("=" * 50)
+        print(f"Request Data: {request.data}")
+        print(f"Content Type: {request.content_type}")
+        print(f"Data Keys: {list(request.data.keys())}")
+
+        from .serializers import UserCreateSerializer
+
+        serializer = UserCreateSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            print(f"Validation Errors: {serializer.errors}")
+            return Response(
+                {"errors": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = serializer.save()
+            print(f"User created successfully: {user.email}")
+            return Response(
+                {
+                    "message": "User created successfully",
+                    "user": user.get_user_info(),
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        except Exception as e:
+            print(f"Error creating user: {str(e)}")
+            import traceback
+
+            traceback.print_exc()
+            return Response({"errors": e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # Create your views here.
 class CustomSignupViewSet(UserViewSet):
@@ -25,7 +72,7 @@ class CustomSignupViewSet(UserViewSet):
         if request.user.is_authenticated:
             return Response(
                 {"detail": "User is already logged in. You need to logout first."},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_403_FORBIDDEN,
             )
         return super().create(request, *args, **kwargs)
 

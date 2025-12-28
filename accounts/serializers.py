@@ -4,6 +4,9 @@ from .models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 
+from djoser.serializers import UserSerializer as BaseUserSerializer
+
+
 def base_name_validator(value, field_name):
     #     we use regex to allow only letters, numbers, underscores, and hyphens in the base name
     import re
@@ -17,59 +20,72 @@ def base_name_validator(value, field_name):
 
 
 class UserCreateSerializer(BaseUserCreateSerializer):
-    profile_pic = serializers.ImageField(required=False, allow_null=True)
-    phone_number = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
+    """
+    Serializer for user registration.
 
-    first_name = serializers.CharField(required=True, allow_blank=False)
+    **Request Format (JSON):**
+    {
+        "first_name": string (required),
+        "last_name": string (required),
+        "email": string (required),
+        "phone_number": string (required),
+        "password": string (required),
+        "terms": boolean (optional)
+    }
+    """
+
+    terms = serializers.BooleanField(write_only=True, required=False)
 
     class Meta(BaseUserCreateSerializer.Meta):
         model = User
-        fields = (
+        fields = [
             "id",
             "email",
             "first_name",
             "last_name",
-            "password",
             "phone_number",
-            "profile_pic",
-        )
+            "password",
+            "terms",
+        ]
+        extra_kwargs = {
+            "password": {"write_only": True},
+            "first_name": {"required": True},
+            "last_name": {"required": True},
+            "phone_number": {"required": True},
+        }
+
+    def validate_email(self, value):
+        """Ensure email is unique and valid."""
+        if User.objects.filter(email=value.lower()).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value.lower()
 
     def validate_phone_number(self, value):
-        valid_symbols = set("0123456789+")
-        if any(char not in valid_symbols for char in value):
+        """Ensure phone number is unique."""
+        if User.objects.filter(phone_number=value).exists():
             raise serializers.ValidationError(
-                "Phone number can only contain digits and '+'"
-            )
-        if len(value) > 15:
-            raise serializers.ValidationError(
-                "Phone number must be at most 15 characters long."
+                "A user with this phone number already exists."
             )
         return value
 
-    def validate_first_name(self, value):
-        return base_name_validator(value, "First name")
 
-    def validate_last_name(self, value):
-        return base_name_validator(value, "Last name")
+class UserSerializer(BaseUserSerializer):
+    """
+    Serializer for user data retrieval.
+    """
 
-
-class UserSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
-
-    class Meta:
+    class Meta(BaseUserSerializer.Meta):
         model = User
-        fields = (
+        fields = [
             "id",
             "email",
             "first_name",
             "last_name",
-            "full_name",
             "phone_number",
-            "profile_pic",
-        )
-        read_only_fields = ("email",)
+            "is_active",
+            "is_staff",
+        ]
+        read_only_fields = ["id", "email", "is_active", "is_staff"]
 
     # Full name is a read-only field that concatenates first_name and last_name
     def get_full_name(self, obj):
@@ -85,7 +101,6 @@ class UserSerializer(serializers.ModelSerializer):
         return profile_pic_url
 
 
-
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         email = attrs.get("email")
@@ -96,9 +111,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         try:
             user_obj = User.objects.get(email=email)
         except User.DoesNotExist:
-            raise serializers.ValidationError({
-                "detail" : {"email": f"Provided email \"{email}\" not found. "}
-            })
+            raise serializers.ValidationError(
+                {"detail": {"email": f'Provided email "{email}" not found. '}}
+            )
 
         if not user_obj.is_active:
             raise serializers.ValidationError({"detail": "Account is inactive."})
@@ -111,12 +126,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         except serializers.ValidationError:
             # If parent fails, it means the password was wrong
             # (since we already checked email exists above) only possible failure is in password
-            raise serializers.ValidationError({
-                "detail" : {"password": "Password is incorrect for given email."}
-            })
+            raise serializers.ValidationError(
+                {"detail": {"password": "Password is incorrect for given email."}}
+            )
 
         # 3. Add Custom Data
         data["user"] = user_obj.get_user_info()
 
         return data
-
