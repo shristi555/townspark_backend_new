@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Issue, IssueImage, IssueComment
+from .models import Issue, IssueImage, IssueComment, IssueProgress
 
 
 class IssueCommentSerializer(serializers.ModelSerializer):
@@ -14,6 +14,48 @@ class IssueImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = IssueImage
         fields = ["id", "image"]
+
+
+class IssueProgressSerializer(serializers.ModelSerializer):
+    updated_by = serializers.SerializerMethodField()
+    issue_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = IssueProgress
+        fields = ["id", "issue_id", "title", "description", "updated_by", "created_at"]
+        read_only_fields = ["id", "created_at", "updated_by"]
+
+    def get_updated_by(self, obj):
+        return {
+            "id": obj.updated_by.id,
+            "email": obj.updated_by.email,
+            "first_name": obj.updated_by.first_name,
+            "last_name": obj.updated_by.last_name,
+        }
+
+    def create(self, validated_data):
+        issue_id = validated_data.pop("issue_id")
+        issue = Issue.objects.get(id=issue_id)
+        validated_data["issue"] = issue
+        validated_data["updated_by"] = self.context["request"].user
+        return super().create(validated_data)
+
+
+class IssueProgressGetSerializer(serializers.ModelSerializer):
+    updated_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = IssueProgress
+        fields = ["id", "issue_id", "title", "description", "updated_by", "created_at"]
+        read_only_fields = ["id", "created_at", "updated_by"]
+
+    def get_updated_by(self, obj):
+        return {
+            "id": obj.updated_by.id,
+            "email": obj.updated_by.email,
+            "first_name": obj.updated_by.first_name,
+            "last_name": obj.updated_by.last_name,
+        }
 
 
 class IssueCreateSerializer(serializers.ModelSerializer):
@@ -67,6 +109,7 @@ class IssueListSerializer(serializers.ModelSerializer):
     likes_count = serializers.IntegerField(source="likes.count", read_only=True)
     comments_count = serializers.IntegerField(source="comments.count", read_only=True)
     reported_by = serializers.CharField(source="reported_by.email", read_only=True)
+    progress_updates = IssueProgressSerializer(many=True, read_only=True)
 
     class Meta:
         model = Issue
@@ -81,19 +124,21 @@ class IssueListSerializer(serializers.ModelSerializer):
             "images",
             "comments_count",
             "likes_count",
+            "progress_updates",
             "created_at",
         ]
 
 
 class IssueDetailSerializer(serializers.ModelSerializer):
     """
-    Serializer for detailed issue view with comments.
+    Serializer for detailed issue view with comments and progress updates.
     """
 
     images = IssueImageSerializer(many=True, read_only=True)
     comments = IssueCommentSerializer(many=True, read_only=True)
     likes_count = serializers.IntegerField(source="likes.count", read_only=True)
     reported_by = serializers.CharField(source="reported_by.email", read_only=True)
+    progress_updates = IssueProgressSerializer(many=True, read_only=True)
 
     class Meta:
         model = Issue
@@ -108,6 +153,7 @@ class IssueDetailSerializer(serializers.ModelSerializer):
             "images",
             "comments",
             "likes_count",
+            "progress_updates",
             "created_at",
         ]
 

@@ -95,3 +95,63 @@ class IssueLike(BaseTimedModel):
 
     def __str__(self):
         return f"{self.liked_by.email} liked {self.issue.title}"
+
+
+class IssueProgress(BaseTimedModel):
+    """
+    Model to track the progress of an issue.
+
+    it will store the following information:
+    1. issue - foreign key to the issue
+    2. Title - title of the issue progress (e.g "Investigation Started", "Fix Deployed" etc)
+    3. Description - description of the issue progress (e.g "We have started investigating the issue" etc)
+    4. updated_by - foreign key to the user who updated the progress (e.g most likely the admin user or the one who uploaded the issue)
+    5. timestamp - timestamp of when the progress was updated (auto set to now on creation)
+    6. created_at - timestamp of when the progress was created (auto set to now on creation)
+    progress updates will not be editable or deletable once created.
+
+    """
+
+    issue = models.ForeignKey(
+        Issue, related_name="progress_updates", on_delete=models.CASCADE
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    updated_by = models.ForeignKey(
+        "accounts.User", related_name="issue_progress_updates", on_delete=models.CASCADE
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return (
+            f"Progress Update: {self.title} for {self.issue.title} at {self.created_at}"
+        )
+
+
+class IssueCategory(models.Model):
+    """
+    Model to represent issue categories.
+    it is used to categorize issues into different types.
+    e.g "Pothole", "Street Light", "Garbage", "Water Leakage" etc
+
+    it will also be helpful in filtering issues based on category.
+
+    fields:
+    1. id - primary key
+    2. name - name of the category (e.g "Pothole", "Street Light", "Garbage", "Water Leakage" etc)
+    3. description - description of the category on what it should be used for
+
+    """
+
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "Issue Categories"
+        ordering = ["name"]

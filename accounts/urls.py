@@ -8,9 +8,7 @@ from accounts.views import (
     CustomTokenVerifyView,
     DebugSignupView,
 )
-from accounts.update.views import (
-    UpdateProfilePictureView,
-)
+from accounts.update.views import UpdateProfilePictureView, ProfileUpdateView
 
 urlpatterns = [
     # Auth
@@ -28,5 +26,14 @@ urlpatterns = [
         UpdateProfilePictureView.as_view(),
         name="update_profile_pic",
     ),
+    path(
+        "me/update/",
+        ProfileUpdateView.as_view(),
+        name="update_profile",
+    ),
     path("logout/", LogoutView.as_view(), name="logout"),
+
+    # path("firstname/update/", FirstNameUpdateView.as_view(), name="update-firstname"),
+    # path("password/update/", PasswordUpdateView.as_view(), name="update-password"),
+
 ]

@@ -35,6 +35,16 @@ class GlobalResponseRenderer(JSONRenderer):
                 "error": error_field,
             }
 
+        # before sending lets add reached_server to top level for backward compatibility
+        wrapped_data["reached_server"] = True
+
+        # also add the user id as requesting_user_id if user is authenticated
+        request = renderer_context.get("request")
+        if request and request.user.is_authenticated:
+            wrapped_data["requesting_user_id"] = request.user.id
+        else:
+            wrapped_data["requesting_user_id"] = None
+
         return super().render(wrapped_data, accepted_media_type, renderer_context)
 
     def _is_already_wrapped(self, data):

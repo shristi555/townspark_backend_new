@@ -62,17 +62,22 @@ class MyIssuesView(APIView):
     """
     Get all issues reported by the authenticated user.
 
-    **Response:** List of issue objects with images and counts
+    **Response:** List of issue objects with images, counts, and progress updates
     """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         issues = Issue.objects.filter(reported_by=request.user).prefetch_related(
-            "images", "comments", "likes"
+            "images",
+            "comments",
+            "likes",
+            "progress_updates",
+            "progress_updates__updated_by",
         )
 
         serializer = IssueListSerializer(issues, many=True)
+
         return Response(serializer.data)
 
 
@@ -82,15 +87,26 @@ class IssueDetailView(APIView):
 
     **URL Parameter:** issue_id (integer)
 
-    **Response:** Detailed issue object with images, comments, and likes
+    **Response:** Detailed issue object with images, comments, likes, and progress updates
     """
 
     def get(self, request, issue_id):
         issue = get_object_or_404(
-            Issue.objects.prefetch_related("images", "comments", "likes"), id=issue_id
+            Issue.objects.prefetch_related(
+                "images",
+                "comments",
+                "likes",
+                "progress_updates",
+                "progress_updates__updated_by",
+            ),
+            id=issue_id,
         )
 
         serializer = IssueDetailSerializer(issue)
+        # for convenience we will return our own user id as requesting_user_id
+        serializer.data["requesting_user_id"] = (
+            request.user.id if request.user.is_authenticated else None
+        )
         return Response(serializer.data)
 
 
@@ -298,3 +314,78 @@ class AdminIssueDeleteView(DestroyAPIView):
     queryset = Issue.objects.all()
     permission_classes = [IsAdminUser]
     lookup_field = "id"
+
+
+class ArchiveIssueView(APIView):
+    """
+    Archive an issue.
+    Only admin or issue creator can archive.
+
+    **Request Format (URL Parameter):**
+    /archive/<int:issue_id>/
+
+
+    **Response:** Success message with issue_id
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, issue_id):
+        if not issue_id:
+            return Response(
+                {"error": "issue_id is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        issue = get_object_or_404(Issue, id=issue_id)
+
+        # Check if user is admin or the one who reported the issue
+        if not (request.user.is_staff or issue.reported_by == request.user):
+            return Response(
+                {"error": "You don't have permission to archive this issue"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        issue.is_archived = True
+        issue.save()
+        return Response(
+            {"message": "Issue archived successfully", "issue_id": issue.id},
+            status=status.HTTP_200_OK,
+        )
+
+
+class UnarchiveIssueView(APIView):
+    """
+    Unarchive an issue.
+    Only admin or issue creator can unarchive.
+
+    **Request Format (URL Parameter):**
+    /unarchive/<int:issue_id>/
+
+    **Response:** Success message with issue_id
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, issue_id):
+        if not issue_id:
+            return Response(
+                {"error": "issue_id is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        issue = get_object_or_404(Issue, id=issue_id)
+
+        # Check if user is admin or the one who reported the issue
+        if not (request.user.is_staff or issue.reported_by == request.user):
+            return Response(
+                {"error": "You don't have permission to unarchive this issue"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        issue.is_archived = False
+        issue.save()
+        return Response(
+            {"message": "Issue unarchived successfully", "issue_id": issue.id},
+            status=status.HTTP_200_OK,
+        )

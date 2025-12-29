@@ -62,9 +62,7 @@ class DebugSignupView(APIView):
 class CustomSignupViewSet(UserViewSet):
     """
     Custom signup viewset to handle user registration.
-
     it uses djoser's UserViewSet as a base.
-
     for now we will see if the user already is authenticated and prevent re-registration.
     """
 
@@ -190,8 +188,11 @@ class CustomTokenVerifyView(TokenVerifyView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        from rest_framework_simplejwt.tokens import RefreshToken
+        from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
         from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
 
         # Try to get access token from cookie or body
         access_token = request.data.get("token") or request.COOKIES.get(
@@ -201,6 +202,11 @@ class CustomTokenVerifyView(TokenVerifyView):
         # Try to verify access token first
         if access_token:
             try:
+                # Verify and decode the access token
+                token = AccessToken(access_token)
+                user_id = token.get("user_id")
+                user = User.objects.get(id=user_id)
+
                 # Make request.data mutable and add token
                 request._full_data = {"token": access_token}
                 response = super().post(request, *args, **kwargs)
@@ -208,10 +214,14 @@ class CustomTokenVerifyView(TokenVerifyView):
                 # If verification successful, return success
                 if response.status_code == 200:
                     return Response(
-                        {"detail": "Token is valid.", "refreshed": False},
+                        {
+                            "detail": "Token is valid.",
+                            "refreshed": False,
+                            "user": user.get_user_info(),
+                        },
                         status=status.HTTP_200_OK,
                     )
-            except (TokenError, InvalidToken):
+            except (TokenError, InvalidToken, User.DoesNotExist):
                 # Access token is invalid/expired, try refresh token
                 pass
 
@@ -231,12 +241,20 @@ class CustomTokenVerifyView(TokenVerifyView):
             refresh = RefreshToken(refresh_token)
             new_access_token = str(refresh.access_token)
 
+            # Get user from refresh token
+            user_id = refresh.get("user_id")
+            user = User.objects.get(id=user_id)
+
+            # if we upto this point everything is fine
+            # now we attach user info to response for convenience
+
             # Create response with new tokens
             response = Response(
                 {
                     "detail": "Tokens refreshed successfully.",
                     "refreshed": True,
                     "access": new_access_token,
+                    "user": user.get_user_info(),
                 },
                 status=status.HTTP_200_OK,
             )
