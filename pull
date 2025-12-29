@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+git pull || { echo "Git pull failed"; exit 1; }
+uv sync || echo "uv sync failed (non-fatal)"
+
+uv run manage.py makemigrations
+uv run manage.py migrate
+
+echo "Project successfully updated"
+
+exit 0

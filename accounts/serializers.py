@@ -26,9 +26,9 @@ class UserCreateSerializer(BaseUserCreateSerializer):
     **Request Format (JSON):**
     {
         "first_name": string (required),
-        "last_name": string (required),
+        "last_name": string (optional),
         "email": string (required),
-        "phone_number": string (required),
+        "phone_number": string (optional),
         "password": string (required),
         "terms": boolean (optional)
     }
@@ -50,8 +50,8 @@ class UserCreateSerializer(BaseUserCreateSerializer):
         extra_kwargs = {
             "password": {"write_only": True},
             "first_name": {"required": True},
-            "last_name": {"required": True},
-            "phone_number": {"required": True},
+            "last_name": {"required": False},
+            "phone_number": {"required": False},
         }
 
     def validate_email(self, value):
@@ -60,13 +60,13 @@ class UserCreateSerializer(BaseUserCreateSerializer):
             raise serializers.ValidationError("A user with this email already exists.")
         return value.lower()
 
-    def validate_phone_number(self, value):
-        """Ensure phone number is unique."""
-        if User.objects.filter(phone_number=value).exists():
-            raise serializers.ValidationError(
-                "A user with this phone number already exists."
-            )
-        return value
+    # def validate_phone_number(self, value):
+    #     """Ensure phone number is unique."""
+    #     if User.objects.filter(phone_number=value).exists():
+    #         raise serializers.ValidationError(
+    #             "A user with this phone number already exists."
+    #         )
+    #     return value
 
 
 class UserSerializer(BaseUserSerializer):
