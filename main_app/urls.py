@@ -29,6 +29,7 @@ urlpatterns = [
     path("issues/", include("issues.urls")),
     path("ping/", include("ping.urls")),
     path("health/", include("ping.urls")),
+    path("profile/", include("my_profile.urls")),
 ]
 
 if settings.DEBUG:

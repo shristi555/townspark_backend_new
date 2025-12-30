@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     "django_extensions",
     # Local apps
     "accounts",
+    "my_profile",
     "issues",
     "ping",
 ]

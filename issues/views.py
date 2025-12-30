@@ -25,9 +25,9 @@ class IssueCreateView(APIView):
     **Request Format (multipart/form-data):**
     - title: string (required)
     - description: string (required)
-    - category: string (required)
+    - category_id: integer (optional) OR category_name: string (optional) - one is required
     - address: string (optional)
-    - uploaded_images: file[] (required,minimum of 1 max of 10, at least 1-10 images)
+    - uploaded_images: file[] (required, minimum of 1 max of 10)
 
     **Response:** Created issue object with status 201
     """
@@ -68,12 +68,17 @@ class MyIssuesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        issues = Issue.objects.filter(reported_by=request.user).prefetch_related(
-            "images",
-            "comments",
-            "likes",
-            "progress_updates",
-            "progress_updates__updated_by",
+        issues = (
+            Issue.objects.filter(reported_by=request.user)
+            .select_related("reported_by")
+            .prefetch_related(
+                "images",
+                "comments",
+                "likes",
+                "progress_updates",
+                "progress_updates__updated_by",
+                "progress_updates__images",  # NEW - optimize progress images
+            )
         )
 
         serializer = IssueListSerializer(issues, many=True)
@@ -92,22 +97,24 @@ class IssueDetailView(APIView):
 
     def get(self, request, issue_id):
         issue = get_object_or_404(
-            Issue.objects.prefetch_related(
+            Issue.objects.select_related("reported_by").prefetch_related(
                 "images",
                 "comments",
+                "comments__commented_by",
                 "likes",
                 "progress_updates",
                 "progress_updates__updated_by",
+                "progress_updates__images",  # NEW - optimize progress images
             ),
             id=issue_id,
         )
 
         serializer = IssueDetailSerializer(issue)
-        # for convenience we will return our own user id as requesting_user_id
-        serializer.data["requesting_user_id"] = (
+        data = serializer.data
+        data["requesting_user_id"] = (
             request.user.id if request.user.is_authenticated else None
         )
-        return Response(serializer.data)
+        return Response(data)
 
 
 class IssueCommentsView(APIView):
@@ -120,7 +127,9 @@ class IssueCommentsView(APIView):
     """
 
     def get(self, request, id):
-        comments = IssueComment.objects.filter(issue_id=id)
+        comments = IssueComment.objects.filter(issue_id=id).select_related(
+            "commented_by"
+        )
         serializer = IssueCommentSerializer(comments, many=True)
         return Response(serializer.data)
 
@@ -153,7 +162,6 @@ class CreateCommentView(APIView):
             )
 
         if not issue_id:
-            # print(f"Recieved request data: {request.data}")
             return Response(
                 {"detail": "issue_id is mandatory but not given"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -164,9 +172,10 @@ class CreateCommentView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        comment = IssueComment.objects.create(
-            issue_id=issue_id, text=text, commented_by=request.user
-        )
+        # Validate issue exists
+        issue = get_object_or_404(Issue, id=issue_id)
+
+        IssueComment.objects.create(issue=issue, text=text, commented_by=request.user)
 
         return Response(
             {"message": "Comment added successfully"}, status=status.HTTP_201_CREATED
@@ -193,8 +202,11 @@ class LikeCreateView(APIView):
         if not issue_id:
             return Response({"detail": "issue_id required"}, status=400)
 
+        # Validate issue exists
+        issue = get_object_or_404(Issue, id=issue_id)
+
         like, created = IssueLike.objects.get_or_create(
-            issue_id=issue_id, liked_by=request.user
+            issue=issue, liked_by=request.user
         )
 
         if not created:
@@ -223,13 +235,19 @@ class ToggleLikeView(APIView):
     def post(self, request):
         issue_id = request.data.get("issue_id")
 
-        like = IssueLike.objects.filter(issue_id=issue_id, liked_by=request.user)
+        if not issue_id:
+            return Response({"detail": "issue_id required"}, status=400)
+
+        # Validate issue exists
+        issue = get_object_or_404(Issue, id=issue_id)
+
+        like = IssueLike.objects.filter(issue=issue, liked_by=request.user)
 
         if like.exists():
             like.delete()
             return Response({"liked": False})
 
-        IssueLike.objects.create(issue_id=issue_id, liked_by=request.user)
+        IssueLike.objects.create(issue=issue, liked_by=request.user)
 
         return Response({"liked": True})
 
@@ -244,7 +262,7 @@ class IssueLikesView(APIView):
     """
 
     def get(self, request, id):
-        likes = IssueLike.objects.filter(issue_id=id)
+        likes = IssueLike.objects.filter(issue_id=id).select_related("liked_by")
         return Response(
             [{"user": like.liked_by.email, "time": like.created_at} for like in likes]
         )
@@ -260,7 +278,7 @@ class IssueUpdateView(UpdateAPIView):
     {
         "title": string (optional),
         "description": string (optional),
-        "category": string (optional),
+        "category_id": integer (optional) OR category_name: string (optional),
         "address": string (optional),
         "is_resolved": boolean (optional)
     }
@@ -323,7 +341,6 @@ class ArchiveIssueView(APIView):
 
     **Request Format (URL Parameter):**
     /archive/<int:issue_id>/
-
 
     **Response:** Success message with issue_id
     """
@@ -389,3 +406,5 @@ class UnarchiveIssueView(APIView):
             {"message": "Issue unarchived successfully", "issue_id": issue.id},
             status=status.HTTP_200_OK,
         )
+
+

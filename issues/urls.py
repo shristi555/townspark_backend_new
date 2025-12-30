@@ -52,7 +52,7 @@ urlpatterns = [
     ),
     path("update/<int:id>/", IssueUpdateView.as_view()),
     path("delete/<int:id>/", IssueDeleteView.as_view()),
-]
+  ]
 
 # correct way to add extra patterns
 urlpatterns += progress_patterns + comment_patterns + like_patterns

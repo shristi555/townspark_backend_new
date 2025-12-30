@@ -1,5 +1,20 @@
 from rest_framework import serializers
-from .models import Issue, IssueImage, IssueComment, IssueProgress
+from .models import (
+    Issue,
+    IssueImage,
+    IssueComment,
+    IssueProgress,
+    IssueProgressImage,  # NEW
+    IssueCategory,
+)
+
+
+# class IssueCategorySerializer(serializers.ModelSerializer):
+#     """Serializer for issue categories."""
+
+#     class Meta:
+#         model = IssueCategory
+#         fields = ["id", "name", "description"]
 
 
 class IssueCommentSerializer(serializers.ModelSerializer):
@@ -13,17 +28,44 @@ class IssueCommentSerializer(serializers.ModelSerializer):
 class IssueImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = IssueImage
-        fields = ["id", "image"]
+        fields = ["id", "image", "created_at"]
+
+
+class IssueProgressImageSerializer(serializers.ModelSerializer):
+    """Serializer for progress images."""
+
+    class Meta:
+        model = IssueProgressImage
+        fields = ["id", "image", "created_at"]
 
 
 class IssueProgressSerializer(serializers.ModelSerializer):
+    """Serializer for creating progress updates with images."""
+
     updated_by = serializers.SerializerMethodField()
     issue_id = serializers.IntegerField(write_only=True)
+    images = IssueProgressImageSerializer(many=True, read_only=True)  # NEW
+    uploaded_images = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+        max_length=10,
+        help_text="Optional images for progress update (max 10)",
+    )
 
     class Meta:
         model = IssueProgress
-        fields = ["id", "issue_id", "title", "description", "updated_by", "created_at"]
-        read_only_fields = ["id", "created_at", "updated_by"]
+        fields = [
+            "id",
+            "issue_id",
+            "title",
+            "description",
+            "updated_by",
+            "images",  # NEW - for reading
+            "uploaded_images",  # NEW - for writing
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_by", "images"]
 
     def get_updated_by(self, obj):
         return {
@@ -35,19 +77,45 @@ class IssueProgressSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         issue_id = validated_data.pop("issue_id")
+        uploaded_images = validated_data.pop("uploaded_images", [])  # NEW
+
         issue = Issue.objects.get(id=issue_id)
         validated_data["issue"] = issue
         validated_data["updated_by"] = self.context["request"].user
-        return super().create(validated_data)
+
+        # Create progress update
+        progress = super().create(validated_data)
+
+        # Create associated images
+        if uploaded_images:
+            IssueProgressImage.objects.bulk_create(
+                [
+                    IssueProgressImage(progress=progress, image=image)
+                    for image in uploaded_images
+                ]
+            )
+
+        return progress
 
 
 class IssueProgressGetSerializer(serializers.ModelSerializer):
+    """Serializer for retrieving progress updates (read-only)."""
+
     updated_by = serializers.SerializerMethodField()
+    images = IssueProgressImageSerializer(many=True, read_only=True)  # NEW
 
     class Meta:
         model = IssueProgress
-        fields = ["id", "issue_id", "title", "description", "updated_by", "created_at"]
-        read_only_fields = ["id", "created_at", "updated_by"]
+        fields = [
+            "id",
+            "issue_id",
+            "title",
+            "description",
+            "updated_by",
+            "images",  # NEW
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_by", "images"]
 
     def get_updated_by(self, obj):
         return {
@@ -61,6 +129,7 @@ class IssueProgressGetSerializer(serializers.ModelSerializer):
 class IssueCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating new issues with image uploads.
+    Accepts category ID or creates category by name if it doesn't exist.
     """
 
     uploaded_images = serializers.ListField(
@@ -76,6 +145,16 @@ class IssueCreateSerializer(serializers.ModelSerializer):
         },
     )
 
+    category = serializers.CharField()
+
+    # category_id = serializers.PrimaryKeyRelatedField(
+    #     queryset=IssueCategory.objects.all(),
+    #     source="category",
+    #     required=False,
+    #     allow_null=True,
+    #     write_only=True,
+    # )
+
     class Meta:
         model = Issue
         fields = [
@@ -84,6 +163,8 @@ class IssueCreateSerializer(serializers.ModelSerializer):
             "description",
             "category",
             "address",
+            "latitude",
+            "longitude",
             "uploaded_images",
         ]
 
@@ -109,7 +190,7 @@ class IssueListSerializer(serializers.ModelSerializer):
     likes_count = serializers.IntegerField(source="likes.count", read_only=True)
     comments_count = serializers.IntegerField(source="comments.count", read_only=True)
     reported_by = serializers.CharField(source="reported_by.email", read_only=True)
-    progress_updates = IssueProgressSerializer(many=True, read_only=True)
+    progress_updates = IssueProgressGetSerializer(many=True, read_only=True)  # CHANGED
 
     class Meta:
         model = Issue
@@ -119,7 +200,10 @@ class IssueListSerializer(serializers.ModelSerializer):
             "description",
             "category",
             "address",
+            "latitude",
+            "longitude",
             "is_resolved",
+            "is_archived",
             "reported_by",
             "images",
             "comments_count",
@@ -138,7 +222,7 @@ class IssueDetailSerializer(serializers.ModelSerializer):
     comments = IssueCommentSerializer(many=True, read_only=True)
     likes_count = serializers.IntegerField(source="likes.count", read_only=True)
     reported_by = serializers.CharField(source="reported_by.email", read_only=True)
-    progress_updates = IssueProgressSerializer(many=True, read_only=True)
+    progress_updates = IssueProgressGetSerializer(many=True, read_only=True)  # CHANGED
 
     class Meta:
         model = Issue
@@ -148,7 +232,10 @@ class IssueDetailSerializer(serializers.ModelSerializer):
             "description",
             "category",
             "address",
+            "latitude",
+            "longitude",
             "is_resolved",
+            "is_archived",
             "reported_by",
             "images",
             "comments",
@@ -161,14 +248,35 @@ class IssueDetailSerializer(serializers.ModelSerializer):
 class IssueUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating existing issues.
+    Accepts category ID or name.
     """
+
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=IssueCategory.objects.all(),
+        source="category",
+        required=False,
+        allow_null=True,
+    )
+    category_name = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True, write_only=True
+    )
 
     class Meta:
         model = Issue
         fields = [
             "title",
             "description",
-            "category",
+            "category_id",
+            "category_name",
             "address",
             "is_resolved",
         ]
+
+    def update(self, instance, validated_data):
+        category_name = validated_data.pop("category_name", None)
+
+        if category_name and not validated_data.get("category"):
+            category, _ = IssueCategory.objects.get_or_create(name=category_name)
+            validated_data["category"] = category
+
+        return super().update(instance, validated_data)
