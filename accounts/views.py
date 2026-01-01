@@ -195,9 +195,9 @@ class CustomTokenVerifyView(TokenVerifyView):
         User = get_user_model()
 
         # Try to get access token from cookie or body
-        access_token = request.data.get("token") or request.COOKIES.get(
+        access_token = request.COOKIES.get(
             settings.SIMPLE_JWT["AUTH_COOKIE"]
-        )
+        ) or request.data.get("token")
 
         # Try to verify access token first
         if access_token:
