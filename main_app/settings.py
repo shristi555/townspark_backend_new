@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     "my_profile",
     "issues",
     "ping",
+    "notification",
 ]
 
 MIDDLEWARE = [

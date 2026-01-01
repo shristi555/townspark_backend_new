@@ -9,6 +9,7 @@ from accounts.views import (
     DebugSignupView,
 )
 from accounts.update.views import UpdateProfilePictureView, ProfileUpdateView
+from accounts.delete_view import DeleteUserView
 
 urlpatterns = [
     # Auth
@@ -31,6 +32,7 @@ urlpatterns = [
         ProfileUpdateView.as_view(),
         name="update_profile",
     ),
+    path("me/delete/", DeleteUserView.as_view(), name="delete_user"),
     path("logout/", LogoutView.as_view(), name="logout"),
 
     # path("firstname/update/", FirstNameUpdateView.as_view(), name="update-firstname"),
