@@ -147,6 +147,21 @@ class IssueCreateSerializer(serializers.ModelSerializer):
 
     category = serializers.CharField()
 
+    latitude = serializers.DecimalField(
+        max_digits=13,
+        decimal_places=10,
+        required=False,
+        allow_null=True,
+        coerce_to_string=False,
+    )
+    longitude = serializers.DecimalField(
+        max_digits=13,
+        decimal_places=10,
+        required=False,
+        allow_null=True,
+        coerce_to_string=False,
+    )
+
     # category_id = serializers.PrimaryKeyRelatedField(
     #     queryset=IssueCategory.objects.all(),
     #     source="category",
@@ -167,6 +182,24 @@ class IssueCreateSerializer(serializers.ModelSerializer):
             "longitude",
             "uploaded_images",
         ]
+
+    def validate_latitude(self, value):
+        """Validate latitude is within valid range."""
+        if value is not None:
+            if value < -90 or value > 90:
+                raise serializers.ValidationError(
+                    "Latitude must be between -90 and 90 degrees."
+                )
+        return value
+
+    def validate_longitude(self, value):
+        """Validate longitude is within valid range."""
+        if value is not None:
+            if value < -180 or value > 180:
+                raise serializers.ValidationError(
+                    "Longitude must be between -180 and 180 degrees."
+                )
+        return value
 
     def create(self, validated_data):
         images = validated_data.pop("uploaded_images", [])
