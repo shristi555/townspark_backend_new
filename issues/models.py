@@ -73,12 +73,16 @@ class Issue(BaseTimedModel):
 
     # Location fields
     address = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     latitude = models.DecimalField(
         max_digits=13, decimal_places=10, null=True, blank=True
     )
     longitude = models.DecimalField(
         max_digits=13, decimal_places=10, null=True, blank=True
     )
+
+    # Resolution tracking
+    resolved_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -88,6 +92,15 @@ class Issue(BaseTimedModel):
 
     def __str__(self):
         return f"{self.title} (#{self.id})"
+
+    def save(self, *args, **kwargs):
+        # Update resolved_at when is_resolved becomes True
+        if self.is_resolved and not self.resolved_at:
+            from django.utils import timezone
+            self.resolved_at = timezone.now()
+        elif not self.is_resolved:
+            self.resolved_at = None
+        super().save(*args, **kwargs)
 
     @property
     def like_count(self):

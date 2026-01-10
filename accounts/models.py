@@ -57,6 +57,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     def username(self):
         return self.email  # simply return email as username
 
+    def get_full_name(self):
+        """Return the first_name plus the last_name, with a space in between."""
+        full_name = f"{self.first_name} {self.last_name or ''}"
+        return full_name.strip()
+
+    def get_short_name(self):
+        """Return the short name for the user."""
+        return self.first_name
+
     def save(self, *args, **kwargs):
         """
         Ensure the profile image filename uses the instance id.
