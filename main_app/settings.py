@@ -54,7 +54,6 @@ LOGGING = {
 # Application definition
 
 INSTALLED_APPS = [
-    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -192,55 +191,4 @@ USE_I18N = True
 USE_TZ = True
 STATIC_URL = "static/"
 
-# Jazzmin Admin Configuration
-JAZZMIN_SETTINGS = {
-    "site_title": "Townspark Admin",
-    "site_header": "Townspark",
-    "site_brand": "Townspark Admin",
-    "site_logo": None,
-    "welcome_sign": "Welcome back to Townspark Administration",
-    "copyright": "Townspark Ltd",
-    "search_model": ["accounts.User", "issues.Issue"],
-    "user_avatar": "profile_pic",
-    "topmenu_links": [
-        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"model": "accounts.User"},
-        {"model": "issues.Issue"},
-    ],
-    "show_sidebar": True,
-    "navigation_expanded": True,
-    "icons": {
-        "accounts.User": "fas fa-user",
-        "issues.Issue": "fas fa-exclamation-circle",
-        "issues.IssueComment": "fas fa-comments",
-        "issues.IssueCategory": "fas fa-list",
-        "issues.IssueProgress": "fas fa-tasks",
-        "notification.Notification": "fas fa-bell",
-    },
-    "default_icon_parents": "fas fa-chevron-circle-right",
-    "default_icon_children": "fas fa-circle",
-}
 
-JAZZMIN_UI_SETTINGS = {
-    "navbar_small_text": False,
-    "footer_small_text": False,
-    "body_small_text": False,
-    "brand_small_text": False,
-    "brand_colour": "navbar-primary",
-    "accent": "accent-primary",
-    "navbar": "navbar-white navbar-light",
-    "no_navbar_border": False,
-    "navbar_fixed": True,
-    "layout_fixed": True,
-    "footer_fixed": False,
-    "sidebar_fixed": True,
-    "sidebar": "sidebar-dark-primary",
-    "sidebar_nav_small_text": False,
-    "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": True,
-    "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": False,
-    "sidebar_nav_flat_style": False,
-    "theme": "flatly",
-    "dark_mode_theme": "darkly",
-}

@@ -1,0 +1,15 @@
+{% load i18n admin_urls %}
+<div class="submit-row flex justify-end gap-3 px-8 py-4 bg-white/80 backdrop-blur-md border-t border-slate-200">
+{% block submit-row %}
+{% if show_delete_link and not is_popup %}
+    {% url opts|admin_urlname:'delete' original.pk|admin_urlquote as delete_url %}
+    <a href="{% add_preserved_filters delete_url %}" class="deletelink bg-red-50 text-red-600 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-red-100 transition-all mr-auto">
+        <i class="fas fa-trash-alt mr-2"></i> {% translate "Delete" %}
+    </a>
+{% endif %}
+{% if show_save_as_new %}<input type="submit" value="{% translate 'Save as new' %}" name="_saveasnew" class="bg-slate-100 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all">{% endif %}
+{% if show_save_and_add_another %}<input type="submit" value="{% translate 'Save and add another' %}" name="_addanother" class="bg-slate-100 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all">{% endif %}
+{% if show_save_and_continue %}<input type="submit" value="{% if can_change %}{% translate 'Save and continue editing' %}{% else %}{% translate 'Save and view' %}{% endif %}" name="_continue" class="bg-primary-50 text-primary-600 border border-primary-100 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-primary-100 transition-all">{% endif %}
+{% if show_save %}<input type="submit" value="{% translate 'Save' %}" class="default bg-primary-600 text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary-200 hover:bg-primary-700 transition-all" name="_save">{% endif %}
+{% endblock %}
+</div>

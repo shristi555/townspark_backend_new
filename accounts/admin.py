@@ -3,6 +3,8 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from accounts.models import User
 
+from django.utils.safestring import mark_safe
+
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     # Columns shown in the changelist
@@ -66,7 +68,7 @@ class UserAdmin(admin.ModelAdmin):
         else:
             badges.append('<span style="padding: 2px 6px; border-radius: 10px; background: #f3f4f6; color: #374151; font-size: 10px; font-weight: bold;">INACTIVE</span>')
         
-        return format_html('<div style="display: flex;">{}</div>', format_html("".join(badges)))
+        return format_html('<div style="display: flex;">{}</div>', mark_safe("".join(badges)))
 
     @admin.display(description=_("Profile"))
     def profile_pic_tag(self, obj):

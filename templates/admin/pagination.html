@@ -1,0 +1,38 @@
+{% load admin_list %}
+{% load i18n %}
+<div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
+    <div class="text-sm text-slate-500">
+        {% if pagination_required %}
+            {% blocktranslate with first=cl.result_list|length count=cl.result_count %}
+                Showing {{ first }} of {{ count }} results
+            {% endblocktranslate %}
+        {% else %}
+            {% blocktranslate count counter=cl.result_count %}
+                {{ counter }} result
+            {% plural %}
+                {{ counter }} results
+            {% endblocktranslate %}
+        {% endif %}
+        {% if show_all_url %}
+            &nbsp;&nbsp;<a href="{{ show_all_url }}" class="text-primary-600 hover:text-primary-700 font-medium">{% translate 'Show all' %}</a>
+        {% endif %}
+    </div>
+
+    {% if pagination_required %}
+        <div class="flex items-center gap-1">
+            {% for i in page_range %}
+                {% if i == '.' %}
+                    <span class="px-2 text-slate-400">...</span>
+                {% elif i == cl.page_num %}
+                    <span class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary-600 text-white text-sm font-bold shadow-md shadow-primary-200 cursor-default">
+                        {{ i }}
+                    </span>
+                {% else %}
+                    <a href="?{{ cl.get_query_string }}&amp;p={{ i|add:"-1" }}" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-all">
+                        {{ i }}
+                    </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>

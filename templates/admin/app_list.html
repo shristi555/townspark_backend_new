@@ -1,0 +1,51 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div id="content-main">
+    <div class="mb-10">
+        <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ title }}</h2>
+        <p class="text-slate-500 mt-2">Browse all available modules and manage your data.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {% if app_list %}
+            {% for app in app_list %}
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden transition-all hover:shadow-md hover:-translate-y-1">
+                    <div class="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-primary-600 shadow-sm border border-slate-100">
+                                <i class="fas fa-folder-open"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-800">{{ app.name }}</h3>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">{{ app.app_label }}</span>
+                    </div>
+                    <div class="px-8 py-6 space-y-4">
+                        {% for model in app.models %}
+                            <div class="group flex items-center justify-between">
+                                <span class="text-slate-700 font-medium group-hover:text-primary-600 transition-colors">{{ model.name }}</span>
+                                <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <a href="{{ model.admin_url }}" class="text-xs font-bold text-slate-400 hover:text-slate-600">VIEW</a>
+                                    {% if model.add_url %}
+                                        <a href="{{ model.add_url }}" class="text-xs font-bold text-primary-500 hover:text-primary-700">ADD</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="px-8 py-4 bg-slate-50/50 border-t border-slate-100 text-right">
+                        <a href="{{ app.app_url }}" class="text-xs font-bold text-primary-600 hover:text-primary-800 uppercase tracking-widest">
+                            Management <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-span-full py-20 text-center">
+                <p class="text-slate-400 italic">No apps found.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

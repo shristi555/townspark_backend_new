@@ -1,0 +1,86 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block breadcrumbs %}
+<li class="inline-flex items-center">
+    <i class="fas fa-chevron-right text-slate-300 mx-2 text-xs"></i>
+    <a href="{% url 'admin:app_list' app_label=opts.app_label %}" class="hover:text-primary-600 transition-colors">
+        {{ opts.app_config.verbose_name }}
+    </a>
+</li>
+<li class="inline-flex items-center">
+    <i class="fas fa-chevron-right text-slate-300 mx-2 text-xs"></i>
+    <a href="{% url opts|admin_urlname:'changelist' %}" class="hover:text-primary-600 transition-colors">
+        {{ opts.verbose_name_plural|capfirst }}
+    </a>
+</li>
+<li class="inline-flex items-center">
+    <i class="fas fa-chevron-right text-slate-300 mx-2 text-xs"></i>
+    <span class="font-bold text-slate-800">
+        {{ object|truncatewords:"18" }}
+    </span>
+</li>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    {% if perms_lacking %}
+        <div class="bg-red-50 border border-red-100 rounded-2xl p-8 text-center shadow-sm">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600 text-2xl">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h2 class="text-xl font-bold text-slate-900 mb-2">{% translate "Deleting" %} {{ object_name }} {% translate "would require deleting the following protected related objects:" %}</h2>
+            
+            <ul class="text-left mt-6 bg-white rounded-xl border border-red-100 p-6 space-y-2">
+                {% for obj in perms_lacking %}
+                    <li class="flex items-start gap-3">
+                        <i class="fas fa-circle text-[6px] text-red-400 mt-2"></i>
+                        <span class="text-slate-700">{{ obj }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% elif protected %}
+        <div class="bg-yellow-50 border border-yellow-100 rounded-2xl p-8 text-center shadow-sm">
+            <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-600 text-2xl">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h2 class="text-xl font-bold text-slate-900 mb-2">{% translate "Deleting" %} {{ object_name }} {% translate "would require deleting the following protected related objects:" %}</h2>
+            
+            <ul class="text-left mt-6 bg-white rounded-xl border border-yellow-100 p-6 space-y-2">
+                {% for obj in protected %}
+                    <li class="flex items-start gap-3">
+                        <i class="fas fa-circle text-[6px] text-yellow-400 mt-2"></i>
+                        <span class="text-slate-700">{{ obj }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <div class="bg-white border border-slate-100 rounded-3xl p-10 shadow-xl shadow-slate-200 text-center">
+            <div class="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500 text-3xl shadow-sm border border-red-100">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">{% translate "Are you sure?" %}</h2>
+            <p class="text-slate-500 mb-8 max-w-md mx-auto">
+                {% translate "Are you sure you want to delete the" %} {{ object_name }} "{{ object }}"? 
+                {% translate "All of the following related items will be deleted:" %}
+            </p>
+
+            <div class="bg-slate-50 rounded-xl p-6 mb-8 text-left max-h-60 overflow-y-auto border border-slate-100 custom-scrollbar">
+                <ul class="space-y-2">
+                    {{ deleted_objects|unordered_list }}
+                </ul>
+            </div>
+
+            <form method="post" class="flex items-center justify-center gap-4">{% csrf_token %}
+                <a href="#" onclick="window.history.back()" class="px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                    {% translate "No, take me back" %}
+                </a>
+                <input type="submit" value="{% translate 'Yes, I’m sure' %}" class="px-8 py-3 rounded-xl font-bold bg-red-500 text-white shadow-lg shadow-red-200 hover:bg-red-600 transition-all cursor-pointer">
+            </form>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
