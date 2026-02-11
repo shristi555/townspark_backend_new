@@ -75,10 +75,10 @@ class Issue(BaseTimedModel):
     address = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     latitude = models.DecimalField(
-        max_digits=13, decimal_places=10, null=True, blank=True
+        max_digits=175, decimal_places=75, null=True, blank=True
     )
     longitude = models.DecimalField(
-        max_digits=13, decimal_places=10, null=True, blank=True
+        max_digits=175, decimal_places=75, null=True, blank=True
     )
 
     # Resolution tracking

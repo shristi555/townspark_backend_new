@@ -148,15 +148,15 @@ class IssueCreateSerializer(serializers.ModelSerializer):
     category = serializers.CharField()
 
     latitude = serializers.DecimalField(
-        max_digits=13,
-        decimal_places=10,
+        max_digits=175,
+        decimal_places=75,
         required=False,
         allow_null=True,
         coerce_to_string=False,
     )
     longitude = serializers.DecimalField(
-        max_digits=13,
-        decimal_places=10,
+        max_digits=175,
+        decimal_places=75,
         required=False,
         allow_null=True,
         coerce_to_string=False,
