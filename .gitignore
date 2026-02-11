@@ -10,3 +10,4 @@ wheels/
 .venv
 plan.md
 media/*
+db.sqlite3
