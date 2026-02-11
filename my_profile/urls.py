@@ -3,6 +3,7 @@ from my_profile.views import (
     ProfileEditView,
     ExploreFeedView,
     AnalyticsView,
+    UserProfileView,
 )
 from django.urls import path
 
@@ -13,4 +14,5 @@ urlpatterns = [
     path("edit/", ProfileEditView.as_view(), name="edit-profile-info"),
     path("explore/", ExploreFeedView.as_view(), name="explore-profiles"),
     path("analytics/", AnalyticsView.as_view(), name="profile-analytics"),
+    path("user/<int:user_id>/", UserProfileView.as_view(), name="user-profile"),
 ]

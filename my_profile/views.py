@@ -359,3 +359,68 @@ class AnalyticsView(APIView):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class UserProfileView(APIView):
+    """
+    Retrieve the public profile information of another user.
+
+    **Response:** User info, reported issues, and recent Activity (comments/reports)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Basic User Info (Public)
+        user_info = {
+            "id": target_user.id,
+            "first_name": target_user.first_name,
+            "last_name": target_user.last_name,
+            "profile_pic": target_user.profile_pic.url if target_user.profile_pic else None,
+            "date_joined": target_user.date_joined,
+            "email": target_user.email, # Maybe hide email? Or mask? User request says public details.
+        }
+
+        # Reported Issues (Public - not archived)
+        all_reported = Issue.objects.filter(reported_by=target_user, is_archived=False).order_by("-created_at")
+        reported_issues_serializer = IssueListSerializer(all_reported, many=True)
+
+        # Recent Comments
+        recent_comments = IssueComment.objects.filter(commented_by=target_user).select_related('issue').order_by("-created_at")[:10]
+        recent_comments_data = []
+        for comment in recent_comments:
+            recent_comments_data.append({
+                "id": comment.id,
+                "text": comment.text,
+                "created_at": comment.created_at,
+                "issue_id": comment.issue.id,
+                "issue_title": comment.issue.title,
+            })
+
+        # Calculate stats
+        impact_rank = User.objects.annotate(
+            issue_count=Count('reported_issues')
+        ).filter(issue_count__gt=target_user.reported_issues.count()).count() + 1
+        
+        stats = {
+            "total_issues_reported": all_reported.count(),
+            "total_resolved": all_reported.filter(is_resolved=True).count(),
+            "total_comments_made": IssueComment.objects.filter(commented_by=target_user).count(),
+            "impact_rank": f"#{impact_rank}",
+        }
+
+        response_data = {
+            "user": user_info,
+            "reported_issues": reported_issues_serializer.data,
+            "recent_comments": recent_comments_data,
+            "stats": stats,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)

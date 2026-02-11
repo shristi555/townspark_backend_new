@@ -19,10 +19,21 @@ from .models import (
 
 class IssueCommentSerializer(serializers.ModelSerializer):
     user = serializers.CharField(source="commented_by.email", read_only=True)
+    user_id = serializers.IntegerField(source="commented_by.id", read_only=True)
+    user_name = serializers.CharField(source="commented_by.get_full_name", read_only=True)
+    user_pic = serializers.SerializerMethodField()
 
     class Meta:
         model = IssueComment
-        fields = ["id", "user", "text", "created_at"]
+        fields = ["id", "user", "user_id", "user_name", "user_pic", "text", "created_at"]
+    
+    def get_user_pic(self, obj):
+        if obj.commented_by.profile_pic:
+            try:
+                return obj.commented_by.profile_pic.url
+            except:
+                return None
+        return None
 
 
 class IssueImageSerializer(serializers.ModelSerializer):
@@ -223,6 +234,9 @@ class IssueListSerializer(serializers.ModelSerializer):
     likes_count = serializers.IntegerField(source="likes.count", read_only=True)
     comments_count = serializers.IntegerField(source="comments.count", read_only=True)
     reported_by = serializers.CharField(source="reported_by.email", read_only=True)
+    reported_by_id = serializers.IntegerField(source="reported_by.id", read_only=True)
+    reported_by_name = serializers.CharField(source="reported_by.get_full_name", read_only=True)
+    
     progress_updates = IssueProgressGetSerializer(many=True, read_only=True)  # CHANGED
 
     class Meta:
@@ -238,6 +252,8 @@ class IssueListSerializer(serializers.ModelSerializer):
             "is_resolved",
             "is_archived",
             "reported_by",
+            "reported_by_id",
+            "reported_by_name",
             "images",
             "comments_count",
             "likes_count",
@@ -255,6 +271,9 @@ class IssueDetailSerializer(serializers.ModelSerializer):
     comments = IssueCommentSerializer(many=True, read_only=True)
     likes_count = serializers.IntegerField(source="likes.count", read_only=True)
     reported_by = serializers.CharField(source="reported_by.email", read_only=True)
+    reported_by_id = serializers.IntegerField(source="reported_by.id", read_only=True)
+    reported_by_name = serializers.CharField(source="reported_by.get_full_name", read_only=True)
+    reported_by_pic = serializers.SerializerMethodField()
     progress_updates = IssueProgressGetSerializer(many=True, read_only=True)  # CHANGED
 
     class Meta:
@@ -270,12 +289,23 @@ class IssueDetailSerializer(serializers.ModelSerializer):
             "is_resolved",
             "is_archived",
             "reported_by",
+            "reported_by_id",
+            "reported_by_name",
+            "reported_by_pic",
             "images",
             "comments",
             "likes_count",
             "progress_updates",
             "created_at",
         ]
+    
+    def get_reported_by_pic(self, obj):
+        if obj.reported_by.profile_pic:
+            try:
+                return obj.reported_by.profile_pic.url
+            except:
+                return None
+        return None
 
 
 class IssueUpdateSerializer(serializers.ModelSerializer):

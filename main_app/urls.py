@@ -32,6 +32,7 @@ urlpatterns = [
     path("profile/", include("my_profile.urls")),
     path("notifications/", include("notification.urls")),
     path("testimonials/", include("testimonial.urls")),
+    path("explore/", include("discovery.urls")),
 ]
 
 if settings.DEBUG:

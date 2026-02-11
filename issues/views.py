@@ -313,7 +313,12 @@ class IssueDeleteView(DestroyAPIView):
                 {"detail": "You need to archive this issue first to delete the issue."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        return super().destroy(request, *args, **kwargs)
+        issue_id = instance.id
+        instance.delete()
+        return Response(
+            {"message": "Issue deleted successfully", "issue_id": issue_id},
+            status=status.HTTP_200_OK,
+        )
 
 
 class CommentDeleteView(DestroyAPIView):
@@ -329,6 +334,15 @@ class CommentDeleteView(DestroyAPIView):
     permission_classes = [IsOwnerOrStaff]
     lookup_field = "id"
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        comment_id = instance.id
+        instance.delete()
+        return Response(
+            {"message": "Comment deleted successfully", "comment_id": comment_id},
+            status=status.HTTP_200_OK,
+        )
+
 
 class AdminIssueDeleteView(DestroyAPIView):
     """
@@ -342,6 +356,15 @@ class AdminIssueDeleteView(DestroyAPIView):
     queryset = Issue.objects.all()
     permission_classes = [IsAdminUser]
     lookup_field = "id"
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        issue_id = instance.id
+        instance.delete()
+        return Response(
+            {"message": "Issue deleted successfully", "issue_id": issue_id},
+            status=status.HTTP_200_OK,
+        )
 
 
 class ArchiveIssueView(APIView):
@@ -376,7 +399,11 @@ class ArchiveIssueView(APIView):
         issue.is_archived = True
         issue.save()
         return Response(
-            {"message": "Issue archived successfully", "issue_id": issue.id},
+            {
+                "success": True,
+                "message": "Issue archived successfully",
+                "issue_id": issue.id,
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -413,7 +440,11 @@ class UnarchiveIssueView(APIView):
         issue.is_archived = False
         issue.save()
         return Response(
-            {"message": "Issue unarchived successfully", "issue_id": issue.id},
+            {
+                "success": True,
+                "message": "Issue unarchived successfully",
+                "issue_id": issue.id,
+            },
             status=status.HTTP_200_OK,
         )
 

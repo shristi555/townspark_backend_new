@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     "ping",
     "notification",
     "testimonial",
+    "discovery",
 ]
 
 MIDDLEWARE = [
