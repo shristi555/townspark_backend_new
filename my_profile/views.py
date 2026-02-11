@@ -7,6 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 from accounts.serializers import UserSerializer
 from issues.serializers import IssueListSerializer
+from accounts.models import User
 from issues.models import Issue, IssueComment, IssueLike
 
 
@@ -59,6 +60,32 @@ class GetProfileInfoView(APIView):
         # Calculate stats
         total_comments_made = IssueComment.objects.filter(commented_by=user).count()
 
+        # Calculate impact rank
+        user_issue_count = user.reported_issues.count()
+        impact_rank = User.objects.annotate(
+            issue_count=Count('reported_issues')
+        ).filter(issue_count__gt=user_issue_count).count() + 1
+
+        # Resolution overview (last 7 days)
+        resolution_overview = []
+        for i in range(7):
+            date = (timezone.now() - timedelta(days=6-i)).date()
+            resolved_count = user.reported_issues.filter(
+                is_resolved=True, 
+                resolved_at__date=date
+            ).count()
+            reported_count = user.reported_issues.filter(
+                created_at__date=date
+            ).count()
+            resolution_overview.append({
+                "day": date.strftime("%a"),
+                "resolved": resolved_count,
+                "reported": reported_count,
+            })
+
+        # Category breakdown for this user
+        category_breakdown = list(user.reported_issues.values('category').annotate(count=Count('id')).order_by('-count'))
+
         response_data = {
             "user": user_info,
             "reported_issues": {
@@ -75,12 +102,15 @@ class GetProfileInfoView(APIView):
             },
             "stats": {
                 "total_issues_reported": user.reported_issues.count(),
+                "total_resolved": user.reported_issues.filter(is_resolved=True).count(),
                 "total_issues_liked": liked_issues.count(),
                 "total_comments_made": total_comments_made,
                 "total_images_added": user.reported_issues.aggregate(
                     total=Count("images")
-                )["total"]
-                or 0,
+                )["total"] or 0,
+                "impact_rank": f"#{impact_rank}",
+                "resolution_overview": resolution_overview,
+                "category_breakdown": category_breakdown,
             },
         }
 
@@ -180,50 +210,44 @@ class ExploreFeedView(APIView):
 
 class AnalyticsView(APIView):
     """
-    Get analytics data for the authenticated user.
+    Get global analytics data for the Townspark ecosystem.
 
-    Provides comprehensive statistics about user's issue reporting patterns
+    Provides comprehensive statistics about all issues reporting patterns
     including resolution times, engagement metrics, and time-based trends.
     """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-
-        # Get all issues reported by user
-        user_issues = user.reported_issues.all()
+        # Get all issues in the app
+        all_issues = Issue.objects.all()
 
         # Basic counts
-        total_issues_reported = user_issues.count()
-        total_issues_resolved = user_issues.filter(is_resolved=True).count()
+        total_issues_reported = all_issues.count()
+        total_issues_resolved = all_issues.filter(is_resolved=True).count()
 
-        # Engagement metrics on user's issues
-        total_likes_received = IssueLike.objects.filter(issue__reported_by=user).count()
-        total_comments_received = (
-            IssueComment.objects.filter(issue__reported_by=user)
-            .exclude(commented_by=user)
-            .count()
-        )  # Exclude user's own comments
+        # Engagement metrics on all issues
+        total_likes_received = IssueLike.objects.count()
+        total_comments_received = IssueComment.objects.count()
 
         # Resolution time statistics for resolved issues
-        resolved_issues = user_issues.filter(is_resolved=True)
+        resolved_issues = all_issues.filter(is_resolved=True)
 
         # Calculate resolution times
         resolution_data = resolved_issues.annotate(
             resolution_time=ExpressionWrapper(
-                F("updated_at") - F("created_at"), output_field=DurationField()
+                F("resolved_at") - F("created_at"), output_field=DurationField()
             )
         )
 
         # Count issues by resolution time brackets
         now = timezone.now()
         solved_within_7_days = resolved_issues.filter(
-            updated_at__lte=F("created_at") + timedelta(days=7)
+            resolved_at__lte=F("created_at") + timedelta(days=7)
         ).count()
 
         solved_within_30_days = resolved_issues.filter(
-            updated_at__lte=F("created_at") + timedelta(days=30)
+            resolved_at__lte=F("created_at") + timedelta(days=30)
         ).count()
 
         # Average resolution time in days
@@ -244,7 +268,7 @@ class AnalyticsView(APIView):
         for i in range(12):
             month_start = twelve_months_ago + timedelta(days=30 * i)
             month_end = month_start + timedelta(days=30)
-            count = user_issues.filter(
+            count = all_issues.filter(
                 created_at__gte=month_start, created_at__lt=month_end
             ).count()
             monthly_issues.append(
@@ -253,7 +277,7 @@ class AnalyticsView(APIView):
 
         # Category distribution
         category_stats = (
-            user_issues.values("category")
+            all_issues.values("category")
             .annotate(count=Count("id"))
             .order_by("-count")
         )
@@ -261,20 +285,20 @@ class AnalyticsView(APIView):
         # Status breakdown
         status_breakdown = {
             "resolved": total_issues_resolved,
-            "pending": user_issues.filter(is_resolved=False, is_archived=False).count(),
-            "archived": user_issues.filter(is_archived=True).count(),
+            "pending": all_issues.filter(is_resolved=False, is_archived=False).count(),
+            "archived": all_issues.filter(is_archived=True).count(),
         }
 
         # Engagement rate (average likes + comments per issue)
         avg_likes_per_issue = (
-            user_issues.annotate(like_count=Count("likes")).aggregate(
+            all_issues.annotate(like_count=Count("likes")).aggregate(
                 avg=Avg("like_count")
             )["avg"]
             or 0
         )
 
         avg_comments_per_issue = (
-            user_issues.annotate(comment_count=Count("comments")).aggregate(
+            all_issues.annotate(comment_count=Count("comments")).aggregate(
                 avg=Avg("comment_count")
             )["avg"]
             or 0
@@ -282,7 +306,7 @@ class AnalyticsView(APIView):
 
         # Most engaged issue
         most_engaged_issue = (
-            user_issues.annotate(engagement=Count("likes") + Count("comments"))
+            all_issues.annotate(engagement=Count("likes") + Count("comments"))
             .order_by("-engagement")
             .first()
         )
@@ -298,7 +322,7 @@ class AnalyticsView(APIView):
 
         # Recent activity (last 30 days)
         last_30_days = now - timedelta(days=30)
-        recent_issues_count = user_issues.filter(created_at__gte=last_30_days).count()
+        recent_issues_count = all_issues.filter(created_at__gte=last_30_days).count()
         recent_activity_rate = (
             (recent_issues_count / 30) if recent_issues_count > 0 else 0
         )
@@ -309,7 +333,6 @@ class AnalyticsView(APIView):
             "total_likes_received": total_likes_received,
             "total_comments_received": total_comments_received,
             "issues_reported_over_time": monthly_issues,
-            # Resolution statistics
             "resolution_stats": {
                 "solved_within_7_days": solved_within_7_days,
                 "solved_within_30_days": solved_within_30_days,
@@ -322,17 +345,13 @@ class AnalyticsView(APIView):
                 if total_issues_reported > 0
                 else 0,
             },
-            # Status breakdown
             "status_breakdown": status_breakdown,
-            # Category statistics
             "category_distribution": list(category_stats),
-            # Engagement metrics
             "engagement_metrics": {
                 "avg_likes_per_issue": round(avg_likes_per_issue, 2),
                 "avg_comments_per_issue": round(avg_comments_per_issue, 2),
                 "most_engaged_issue": most_engaged_issue_data,
             },
-            # Recent activity
             "recent_activity": {
                 "issues_last_30_days": recent_issues_count,
                 "avg_issues_per_day": round(recent_activity_rate, 2),

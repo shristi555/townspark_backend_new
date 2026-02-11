@@ -77,7 +77,7 @@ class MyIssuesView(APIView):
                 "likes",
                 "progress_updates",
                 "progress_updates__updated_by",
-                "progress_updates__images",  # NEW - optimize progress images
+                "progress_updates__images",
             )
         )
 
@@ -295,15 +295,25 @@ class IssueUpdateView(UpdateAPIView):
 class IssueDeleteView(DestroyAPIView):
     """
     Delete an issue (owner or staff only).
+    The issue must be archived first.
 
     **URL Parameter:** id (integer)
 
-    **Response:** 204 No Content on success
+    **Response:** 204 No Content on success, 400 Bad Request if not archived
     """
 
     queryset = Issue.objects.all()
     permission_classes = [IsOwnerOrStaff]
     lookup_field = "id"
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not instance.is_archived:
+            return Response(
+                {"detail": "You need to archive this issue first to delete the issue."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
 
 
 class CommentDeleteView(DestroyAPIView):
