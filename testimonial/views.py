@@ -16,27 +16,9 @@ class LandingPageDataView(APIView):
     def get(self, request):
         # 1. Calculate Stats
         total_users = User.objects.filter(is_active=True).count()
-        issues_resolved = Issue.objects.filter(is_resolved=True).count()
+        total_issues_reported = Issue.objects.filter(is_archived=False).count()
         cities_connected = Issue.objects.exclude(city__isnull=True).exclude(city="").values("city").distinct().count()
         
-        # Calculate Avg Response Time (in hours) safely
-        avg_response_hours = 48.0 # Default fallback
-        try:
-            avg_response_data = Issue.objects.filter(
-                is_resolved=True, 
-                resolved_at__isnull=False
-            ).annotate(
-                duration=F('resolved_at') - F('created_at')
-            ).aggregate(
-                avg_duration=Avg('duration')
-            )
-            
-            if avg_response_data['avg_duration']:
-                avg_response_hours = round(avg_response_data['avg_duration'].total_seconds() / 3600, 1)
-        except Exception as e:
-            print(f"Stats calculation error: {e}")
-            pass
-
         # 2. Get Testimonials (limit to 6)
         testimonials = Testimonial.objects.filter(is_displayed=True).order_by('-rating', '-created_at')[:6]
         testimonial_serializer = TestimonialSerializer(testimonials, many=True)
@@ -44,9 +26,8 @@ class LandingPageDataView(APIView):
         data = {
             "stats": {
                 "total_users": total_users,
-                "issues_resolved": issues_resolved,
+                "total_issues_reported": total_issues_reported,
                 "cities_connected": cities_connected,
-                "avg_response_time_hrs": avg_response_hours
             },
             "testimonials": testimonial_serializer.data
         }
