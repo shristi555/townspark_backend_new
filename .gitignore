@@ -11,3 +11,4 @@ wheels/
 plan.md
 media/*
 db.sqlite3
+user_details.txt
