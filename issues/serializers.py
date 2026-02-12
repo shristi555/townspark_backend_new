@@ -327,9 +327,9 @@ class IssueUpdateSerializer(serializers.ModelSerializer):
 
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=IssueCategory.objects.all(),
-        source="category",
         required=False,
         allow_null=True,
+        write_only=True
     )
     category_name = serializers.CharField(
         required=False, allow_null=True, allow_blank=True, write_only=True
@@ -347,10 +347,13 @@ class IssueUpdateSerializer(serializers.ModelSerializer):
         ]
 
     def update(self, instance, validated_data):
+        category_id = validated_data.pop("category_id", None)
         category_name = validated_data.pop("category_name", None)
 
-        if category_name and not validated_data.get("category"):
+        if category_id:
+            validated_data["category"] = category_id.name
+        elif category_name:
             category, _ = IssueCategory.objects.get_or_create(name=category_name)
-            validated_data["category"] = category
+            validated_data["category"] = category.name
 
         return super().update(instance, validated_data)

@@ -85,6 +85,11 @@ class UniversalSearchView(APIView):
                 parsed_start = parse_date(start_date)
                 if parsed_start:
                     users = users.filter(created_at__date__gte=parsed_start)
+            
+            if end_date:
+                parsed_end = parse_date(end_date)
+                if parsed_end:
+                    users = users.filter(created_at__date__lte=parsed_end)
 
             results['people'] = UserSearchSerializer(users[:50], many=True, context={'request': request}).data
 
