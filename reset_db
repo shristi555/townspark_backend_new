@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# first remove the sqlite file
+rm -r db.sqlite3
+
+# now apply the migrations
+uv run manage.py makemigrations
+uv run manage.py migrate
+
+# now create the superuser (username: admin, password: [asdfghjkl;''])
+# we will also supress weak pass warning and no need to type manually anything
+uv run manage.py createsuperuser --noinput --email [EMAIL_ADDRESS] --password asdfghjkl --first_name "Admin" 
+
+# now create the dummy data
+uv run python create_dummy_data.py
