@@ -236,6 +236,16 @@ class IssueListSerializer(serializers.ModelSerializer):
     reported_by = serializers.CharField(source="reported_by.email", read_only=True)
     reported_by_id = serializers.IntegerField(source="reported_by.id", read_only=True)
     reported_by_name = serializers.CharField(source="reported_by.get_full_name", read_only=True)
+    reported_by_pic = serializers.SerializerMethodField()
+
+    def get_reported_by_pic(self, obj):
+        if obj.reported_by and obj.reported_by.profile_pic:
+            request = self.context.get("request")
+            url = obj.reported_by.profile_pic.url
+            if request:
+                return request.build_absolute_uri(url)
+            return url
+        return None
     
     progress_updates = IssueProgressGetSerializer(many=True, read_only=True)  # CHANGED
 
@@ -254,6 +264,7 @@ class IssueListSerializer(serializers.ModelSerializer):
             "reported_by",
             "reported_by_id",
             "reported_by_name",
+            "reported_by_pic",
             "images",
             "comments_count",
             "likes_count",

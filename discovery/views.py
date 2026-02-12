@@ -69,7 +69,7 @@ class UniversalSearchView(APIView):
                 elif issue_status == 'archived':
                     issues = issues.filter(is_archived=True)
 
-            results['issues'] = IssueSearchSerializer(issues[:50], many=True).data
+            results['issues'] = IssueSearchSerializer(issues[:50], many=True, context={'request': request}).data
 
         # Search People
         if search_type in ['all', 'person']:
@@ -86,7 +86,7 @@ class UniversalSearchView(APIView):
                 if parsed_start:
                     users = users.filter(created_at__date__gte=parsed_start)
 
-            results['people'] = UserSearchSerializer(users[:50], many=True).data
+            results['people'] = UserSearchSerializer(users[:50], many=True, context={'request': request}).data
 
         return Response(results)
 

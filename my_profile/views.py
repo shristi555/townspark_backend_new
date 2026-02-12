@@ -1,5 +1,5 @@
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Count, Avg, F, ExpressionWrapper, DurationField
@@ -367,7 +367,7 @@ class UserProfileView(APIView):
 
     **Response:** User info, reported issues, and recent Activity (comments/reports)
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, user_id):
         try:
@@ -383,14 +383,14 @@ class UserProfileView(APIView):
             "id": target_user.id,
             "first_name": target_user.first_name,
             "last_name": target_user.last_name,
-            "profile_pic": target_user.profile_pic.url if target_user.profile_pic else None,
-            "date_joined": target_user.date_joined,
+            "profile_pic": request.build_absolute_uri(target_user.profile_pic.url) if target_user.profile_pic else None,
+            "date_joined": target_user.created_at,
             "email": target_user.email, # Maybe hide email? Or mask? User request says public details.
         }
 
         # Reported Issues (Public - not archived)
         all_reported = Issue.objects.filter(reported_by=target_user, is_archived=False).order_by("-created_at")
-        reported_issues_serializer = IssueListSerializer(all_reported, many=True)
+        reported_issues_serializer = IssueListSerializer(all_reported, many=True, context={'request': request})
 
         # Recent Comments
         recent_comments = IssueComment.objects.filter(commented_by=target_user).select_related('issue').order_by("-created_at")[:10]
