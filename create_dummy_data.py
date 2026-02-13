@@ -1,33 +1,30 @@
+
 import os
 import django
 import random
+import argparse
 import glob
 import shutil
-import argparse
 from pathlib import Path
 
-# Setup Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'main_app.settings')
+# -------------------- DJANGO SETUP --------------------
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "main_app.settings")
 django.setup()
 
+from django.utils import timezone
+from django.db import models
 from accounts.models import User
 from issues.models import Issue, IssueImage
-from django.db import models
-from django.utils import timezone
 
-# Constants
-MEDIA_ROOT = 'media'
-PROFILE_PICS_DIR = os.path.join(MEDIA_ROOT, 'profile_pics')
-ISSUE_IMAGES_DIR = os.path.join(MEDIA_ROOT, 'issue_images')
-OUTPUT_FILE = 'user_details.txt'
-DEFAULT_PASSWORD = "asdfghjkl;'"
+# -------------------- GLOBAL CONFIG --------------------
 
 # Frontend Categories
 CATEGORIES = [
     "pothole", "streetlight", "garbage", "water", "drainage", "road", "electricity", "other"
 ]
 
-# Dummy Data Lists
+# Dummy Data Lists - Updated with Nepali names/references
 DUMMY_USERS = [
     ("Gwen Stacy", "gwen@stacy.com"),
     ("Rhaenyra Targaryen", "rhaenyra@targaryen.com"),
@@ -39,414 +36,575 @@ DUMMY_USERS = [
     ("Steve Rogers", "steve@rogers.com"),
     ("Natasha Romanoff", "natasha@romanoff.com"),
     ("Wanda Maximoff", "wanda@maximoff.com"),
+    ("Aarav Sharma", "aarav@sharma.com"),
+    ("Sita Patil", "sita@patil.com"),
+    ("Rohan Gupta", "rohan@gupta.com"),
+    ("Anjali Singh", "anjali@singh.com"),
+    ("Bikram Thapa", "bikram@thapa.com"),
+    ("Manita Gurung", "manita@gurung.com"),
+    ("Rajesh Hamal", "rajesh@hamal.com"),
+    ("Sushma Karki", "sushma@karki.com"),
+    ("Nabin Bhattarai", "nabin@bhattarai.com"),
+    ("Priya Adhikari", "priya@adhikari.com"),
+    ("Suraj Shrestha", "suraj@shrestha.com"),
+    ("Kabita Rai", "kabita@rai.com"),
+    ("Dipendra Shah", "dipendra@shah.com"),
+    ("Ganga Maya", "ganga@maya.com"),
+    ("Hari Bahadur", "hari@bahadur.com"),
 ]
 
-# 150+ Predefined Realistic Issues
-DUMMY_ISSUES = [
-    # Road / Potholes
-    {"title": "Large Pothole on Main St", "desc": "A very large pothole has formed in the middle of the road, causing traffic alerts.", "cat": "pothole"},
-    {"title": "Cracked Sidewalk near Park", "desc": "The sidewalk pavement is cracked and uneven, posing a tripping hazard for pedestrians.", "cat": "road"},
-    {"title": "Missing Street Sign", "desc": "The stop sign at the intersection of 5th and Elm is missing.", "cat": "road"},
-    {"title": "Faded Crosswalk Markings", "desc": "The zebra crossing paint has completely faded, making it dangerous for students crossing.", "cat": "road"},
-    {"title": "Debris Blocking Bike Lane", "desc": "Construction debris has been left in the bike lane for over a week.", "cat": "garbage"},
-    {"title": "Sinkhole Developing", "desc": "Small sinkhole appearing near the breakdown lane on Highway 4.", "cat": "road"},
-    {"title": "Damaged Guardrail", "desc": "Guardrail was hit by a car and keeps protruding into the lane.", "cat": "road"},
-    {"title": "Unpaved Road Connection", "desc": "The connecting road between Sector 4 and 5 is still unpaved and muddy.", "cat": "road"},
-    {"title": "Speed Bump Too High", "desc": "The newly installed speed bump is scraping the bottom of normal sedans.", "cat": "road"},
-    {"title": "Traffic Light Malfunction", "desc": "The signal at the busy 4-way junction is stuck on red for all sides.", "cat": "road"},
-    {"title": "Blind Spot Mirror Broken", "desc": "The convex mirror at the blind turn is shattered.", "cat": "road"},
-    {"title": "Road Resurfacing Needed", "desc": "The entire stretch of road is riddled with small potholes and needs resurfacing.", "cat": "pothole"},
-    {"title": "Illegal Parking Blocking Road", "desc": "Cars are parked on both sides of the narrow lane, blocking traffic flow.", "cat": "road"},
-    {"title": "Loose Gravel Hazard", "desc": "Loose gravel from recent works is causing skidding risks.", "cat": "road"},
-    {"title": "Manhole Cover Loose", "desc": "The manhole cover clanks loudly every time a car passes over it.", "cat": "road"},
-    {"title": "Road Markings Invisible at Night", "desc": "Reflectors are missing and lines are not visible in the dark.", "cat": "road"},
-    {"title": "Bridge Expansion Joint Gap", "desc": "The gap in the bridge joint has widened dangerously.", "cat": "road"},
-    {"title": "Overgrown Bush Blocking View", "desc": "Bushes at the corner are blocking the view of oncoming traffic.", "cat": "other"},
-    {"title": "Narrow Road Congestion", "desc": "The single lane road is causing massive bottlenecks during rush hour.", "cat": "road"},
-    {"title": "Slippery Road Surface", "desc": "Oil spill has not been cleaned up, making the turn very slippery.", "cat": "other"},
+# Central Coordinates for Major Nepali Cities
+# We will generate points around these centers.
+# Structure: "City Name": (Lat, Lng)
+NEPALI_CITIES = {
+    "Kathmandu": (27.7172, 85.3240),
+    "Lalitpur": (27.6644, 85.3188),
+    "Bhaktapur": (27.6710, 85.4298),
+    "Pokhara": (28.2096, 83.9856),
+    "Biratnagar": (26.4525, 87.2718),
+    "Bharatpur": (27.6792, 84.4385),
+    "Birgunj": (27.0135, 84.8773),
+    "Butwal": (27.6975, 83.4646),
+    "Dharan": (26.8126, 87.2852),
+    "Hetauda": (27.4292, 85.0305),
+}
 
-    # Water / Drainage
-    {"title": "Burst Water Main", "desc": "Water is gushing out from the ground, flooding the street.", "cat": "water"},
-    {"title": "No Water Supply", "desc": "Our entire block has had no running water for the last 24 hours.", "cat": "water"},
-    {"title": "Dirty Tap Water", "desc": "The water coming from the tap is brown and smells metallic.", "cat": "water"},
-    {"title": "Low Water Pressure", "desc": "Water pressure is too low to even run the shower on the first floor.", "cat": "water"},
-    {"title": "Leaking Fire Hydrant", "desc": "Fire hydrant is leaking gallons of water onto the pavement.", "cat": "water"},
-    {"title": "Clogged Storm Drain", "desc": "The storm drain is full of leaves and trash, causing immediate flooding when it rains.", "cat": "drainage"},
-    {"title": "Sewage Smell in Neighborhood", "desc": "A strong sewage smell is pervading the area, likely a leak nearby.", "cat": "drainage"},
-    {"title": "Overflowing Sewer Manhole", "desc": "Sewage is bubbling up from the manhole cover.", "cat": "drainage"},
-    {"title": "Broken Drainage Cover", "desc": "The concrete cover of the drain is broken, open hole is dangerous.", "cat": "drainage"},
-    {"title": "Stagnant Water Breeding Mosquitoes", "desc": "Water has pooled in the blocked drainage ditch and is breeding mosquitoes.", "cat": "drainage"},
-    {"title": "Water Meter Leaking", "desc": "The municipal water meter is leaking at the connection point.", "cat": "water"},
-    {"title": "Contaminated Well Water", "desc": "Community well water tested positive for high arsenic levels.", "cat": "water"},
-    {"title": "Drainage Pipe Exposed", "desc": "Underground drainage pipe creates a trip hazard as it has become exposed.", "cat": "drainage"},
-    {"title": "Flooded Underpass", "desc": "The underpass floods completely even with light rain.", "cat": "drainage"},
-    {"title": "Illegal Water Connection", "desc": "Someone has tapped into the main line illegally, reducing pressure for others.", "cat": "water"},
-    {"title": "Broken Public Tap", "desc": "The public water standpost tap is broken and wasting water.", "cat": "water"},
-    {"title": "Drainage Blocked by Construction", "desc": "Construction soil has filled up the roadside drainage.", "cat": "drainage"},
-    {"title": "Water Tank Overflowing", "desc": "Community overhead tank flows over for hours every morning.", "cat": "water"},
-    {"title": "Frozen Pipes Risk", "desc": "Exposed community pipes need insulation before winter.", "cat": "water"},
-    {"title": "Open Drain Hazard", "desc": "Deep drain running along the school has no fencing.", "cat": "drainage"},
-
-    # Electricity / Streetlights
-    {"title": "Streetlight Not Working", "desc": "The streetlight in front of house #45 has been out for weeks.", "cat": "streetlight"},
-    {"title": "Flickering Streetlight", "desc": "The light flickers like a strobe light, very distracting for drivers.", "cat": "streetlight"},
-    {"title": "Dayburning Streetlight", "desc": "Streetlight stays on all day wasting electricity.", "cat": "streetlight"},
-    {"title": "Exposed Electrical Wires", "desc": "Live wires are hanging low from the pole near the playground.", "cat": "electricity"},
-    {"title": "Transformer Sparking", "desc": "The pole transformer emits sparks and loud bangs randomly.", "cat": "electricity"},
-    {"title": "Power Line Down", "desc": "Storm brought down a power line across the driveway.", "cat": "electricity"},
-    {"title": "Broken Light Pole Base", "desc": "The base of the light pole is rusted and looks like it might fall.", "cat": "streetlight"},
-    {"title": "Dark Park Area", "desc": "The central park area is completely pitch black at night, needs lighting.", "cat": "streetlight"},
-    {"title": "Voltage Fluctuation", "desc": "Voltage keeps dropping, damaging appliances in the neighborhood.", "cat": "electricity"},
-    {"title": "Leaning Utility Pole", "desc": "The wooden utility pole is leaning dangerously over the road.", "cat": "electricity"},
-    {"title": "Dim Streetlights", "desc": "The new LED lights are too dim to illuminate the sidewalk.", "cat": "streetlight"},
-    {"title": "Electric Meter Box Open", "desc": "The community distribution box cover is missing.", "cat": "electricity"},
-    {"title": "Vegetation on Power Lines", "desc": "Tree branches are entangled with high voltage lines.", "cat": "electricity"},
-    {"title": "Unauthorized Cable Fest", "desc": "Too many unauthorized cables dragging down the main pole.", "cat": "electricity"},
-    {"title": "Old Bulb Replacement", "desc": "The amber sodium lamps are dead and need LED replacement.", "cat": "streetlight"},
-    {"title": "Scheduled Power Cut Issue", "desc": "Power cuts are lasting longer than the announced schedule.", "cat": "electricity"},
-    {"title": "Loose Wire on Walkway", "desc": "A wire is dangling at head height on the walkway.", "cat": "electricity"},
-    {"title": "Fuse Box Fire Hazard", "desc": "Smoke seen coming from the feeder pillar box.", "cat": "electricity"},
-    {"title": "Solar Light Battery Dead", "desc": "The solar street lights don't last past 8 PM.", "cat": "streetlight"},
-    {"title": "Light Pollution into Homes", "desc": "Streetlight shield is missing, shining directly into bedroom windows.", "cat": "streetlight"},
-
-    # Garbage / Waste
-    {"title": "Overflowing Dumpster", "desc": "The community dumpster hasn't been emptied in 2 weeks.", "cat": "garbage"},
-    {"title": "Illegal Dumping in Vacant Lot", "desc": "People are dumping construction waste and old furniture in the empty lot.", "cat": "garbage"},
-    {"title": "Missed Trash Collection", "desc": "Garbage truck missed our street this Tuesday.", "cat": "garbage"},
-    {"title": "Litter in Public Park", "desc": "The park is covered in plastic bottles and wrappers after the weekend.", "cat": "garbage"},
-    {"title": "Dead Animal on Road", "desc": "Roadkill has been decomposing on the shoulder for days.", "cat": "garbage"},
-    {"title": "Broken Public Bin", "desc": "The public dustbin is smashed and trash is spilling out.", "cat": "garbage"},
-    {"title": "Burning Garbage Smell", "desc": "Toxic smell from someone burning plastic waste nearby.", "cat": "garbage"},
-    {"title": "Medical Waste Found", "desc": "Found syringes and medical waste dumped near the creek.", "cat": "garbage"},
-    {"title": "Recycling Not Picked Up", "desc": "Recycling bags are piling up on the curb.", "cat": "garbage"},
-    {"title": "Trash Blocking Sidewalk", "desc": "Restaurant piles garbage bags blocking the entire sidewalk.", "cat": "garbage"},
-    {"title": "Lack of Bins in Market", "desc": "No dustbins available in the main market area causing littering.", "cat": "garbage"},
-    {"title": "Dog Waste Issue", "desc": "Sidewalks are covered in dog poop, need specific bins or signs.", "cat": "garbage"},
-    {"title": "Spilled Garbage Truck Load", "desc": "The truck spilled a load of trash and drove off without cleaning.", "cat": "garbage"},
-    {"title": "Hazardous Waste Dumped", "desc": "Barrels of unknown chemical dumped in the ditch.", "cat": "garbage"},
-    {"title": "Fly Tipping in Alley", "desc": "Old mattresses and appliances blocking the alleyway.", "cat": "garbage"},
-    {"title": "Maggot Infestation", "desc": "Rotting pile of food waste is causing a maggot infestation.", "cat": "garbage"},
-    {"title": "Plastic Waste in River", "desc": "The river bank is chocked with single-use plastics.", "cat": "garbage"},
-    {"title": "Full Bin Notification", "desc": "Smart bin sensor says full but no pickup yet.", "cat": "garbage"},
-    {"title": "Sharp Object Hazard", "desc": "Broken glass dumped carelessly on the grass.", "cat": "garbage"},
-    {"title": "Post-Event Cleanup Needed", "desc": "Street fair ended yesterday but trash is everywhere.", "cat": "garbage"},
-
-    # Generic / Other
-    {"title": "Graffiti on Public Wall", "desc": "Offensive graffiti spray-painted on the school wall.", "cat": "other"},
-    {"title": "Broken Park Bench", "desc": "Wooden slats on the bench are rotting and broken.", "cat": "other"},
-    {"title": "Vandalized Bus Stop", "desc": "Glass shelter at the bus stop has been shattered.", "cat": "other"},
-    {"title": "Noise Pollution", "desc": "Construction work continuing late into the night.", "cat": "other"},
-    {"title": "Stray Dog Pack Agressive", "desc": "Pack of stray dogs chasing bikers at night.", "cat": "other"},
-    {"title": "Tree Falling Hazard", "desc": "Dead tree looks like it will fall on the road in the next storm.", "cat": "other"},
-    {"title": "Unauthorized Advertisement", "desc": "Posters glued all over traffic signs.", "cat": "other"},
-    {"title": "Slippery Steps", "desc": "Steps to the subway are covered in moss and slippery.", "cat": "other"},
-    {"title": "Handrail Missing", "desc": "Handrail on the steep staircase is gone.", "cat": "other"},
-    {"title": "Playground Equipment Unsafe", "desc": "The swing set chain is rusted through.", "cat": "other"},
+# Common Nepali Places/Toles/Marga suffix
+NEPALI_PLACE_SUFFIXES = ["Tole", "Marg", "Chok", "Bazzar", "Sadak", "Galli", "Nagar"]
+NEPALI_PLACE_PREFIXES = ["New", "Old", "Upper", "Lower", "San", "Thulo", "Purano", "Naya"]
+COMMON_PLACE_NAMES = [
+    "Baneshwor", "Koteshwor", "Maitidevi", "Putalisadak", "Thamel", "Asan", "Indrachowk",
+    "Patan", "Jawalakhel", "Kupondole", "Lagankhel", "Suryabinayak", "Kamalbinayak",
+    "Mahendrapool", "Lakeside", "Chipledhunga", "Traffic Chowk", "Main Road", "Bargachhi"
 ]
 
-def get_issue_data(idx):
-    """Get issue data, cycling if idx exceeds predefined list."""
-    base_data = DUMMY_ISSUES[idx % len(DUMMY_ISSUES)]
-    # Add variation if reused
-    if idx >= len(DUMMY_ISSUES):
-        return {
-            "title": f"{base_data['title']} ({random.choice(['Recurring', 'New Report', 'Again'])})",
-            "desc": base_data['desc'],
-            "cat": base_data['cat']
-        }
-    return base_data
+# Extended Issues List (200+) ensuring coverage of all 8 categories
+# Categories: "pothole", "streetlight", "garbage", "water", "drainage", "road", "electricity", "other"
 
-def collect_all_images(source_dir):
-    """Collect all valid images from source directory recursively."""
-    images = []
-    print(f"Collecting images from {source_dir}...")
-    for root, dirs, files in os.walk(source_dir):
-        # We manually skip pool inside the walker, but now we might WANT pool if repairing
-        # But this function is usually for finding 'raw' images. 
-        # The pool logic is handled specially in main.
-        if '_pool' in root:
-            continue
-            
-        for file in files:
-            if file.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
-                full_path = os.path.join(root, file)
-                images.append(full_path)
-    print(f"Found {len(images)} images total.")
-    return images
+DUMMY_ISSUES = []
 
-def main():
-    parser = argparse.ArgumentParser(description="Generate dummy data for Townspark.")
-    parser.add_argument('-u', '--users', type=int, default=8, help="Target number of users (default: 8)")
-    parser.add_argument('-i', '--issues', type=int, default=150, help="Target number of issues (default: 150)")
+# Helper to generate issues
+def create_issue_template(title, desc, cat):
+    return {"title": title, "desc": desc, "cat": cat}
+
+# 1. Potholes (Target: ~25)
+pothole_templates = [
+    ("Large Pothole on Main Road", "A massive pothole is causing traffic slowdowns and potential vehicle damage."),
+    ("Deep Crater near School", "Dangerous deep pothole right in front of the primary school gate."),
+    ("Series of Potholes", "A stretch of 100m is full of small but sharp potholes."),
+    ("Resurfaced Road Sinking", "Newly resurfaced road has already developed a pothole."),
+    ("Pothole Filled with Water", "Rainwater has filled a pothole making it invisible to bikers."),
+    ("Hidden Pothole on Turn", "Dangerous pothole located exactly on a blind turn."),
+    ("Sharp Edged Pothole", "Pothole with very sharp edges caused a tire blowout."),
+    ("Expanding Pothole", "This pothole has doubled in size over the last month."),
+    ("Gravel filled Pothole washed away", "The temporary gravel fill has washed away leaving the hole open."),
+    ("Pothole on Bridge", "Concerns about structural integrity due to pothole on the bridge deck."),
+    ("Pothole near Bus Stop", "Passengers are tripping over a pothole while getting off the bus."),
+    ("Bike Accident caused by Pothole", "Witnessed a bike skid due to this pothole yesterday."),
+    ("Pothole obstructing driveway", "Cannot exit driveway safely due to large hole."),
+    ("Pothole accumulating trash", "Trash is collecting in the pothole creating a mess."),
+    ("Multiple potholes on crosswalk", "Pedestrians twisting ankles on the crosswalk."),
+    ("Jagged Pothole", "Asphalt has broken away leaving jagged edges."),
+    ("Pothole affecting drainage", "Pothole is diverting water away from the drain."),
+    ("Neglected Pothole", "Reported months ago, still no action on this pothole."),
+    ("Pothole on Highway connection", "High speed entry ramp has a dangerous pothole."),
+    ("Cluster of Potholes", "Impossible to dodge one without hitting another."),
+    ("Sunken Manhole Pothole", "Area around manhole has sunk creating a pothole effect."),
+    ("Pothole near Hospital", "Ambulances have to slow down significantly here."),
+    ("Muddy Pothole", "Pothole creates a mud splash zone for pedestrians."),
+    ("Pothole on narrow lane", "Blocks the entire width of the narrow lane."),
+    ("Reopened Pothole", "The patch work failed and the pothole is back."),
+]
+for p in pothole_templates: DUMMY_ISSUES.append(create_issue_template(p[0], p[1], "pothole"))
+
+# 2. Streetlight (Target: ~25)
+streetlight_templates = [
+    ("Streetlight completely out", "The pole #34 is completely dark at night."),
+    ("Flickering Streetlight", "Light is strobing, causing seizures/headaches."),
+    ("Dayburning Light", "Streetlight is on during the day, wasting energy."),
+    ("Dim Streetlight", "Bulb is failing and providing almost no light."),
+    ("Broken Lamp Cover", "The plastic cover is hanging by a wire."),
+    ("Leaning Light Pole", "The entire pole is leaning dangerously."),
+    ("Light Obstructed by Tree", "Branches have grown over the light blocking it."),
+    ("Missing Bulb", "The socket is empty, looks like bulb was stolen or fell."),
+    ("Sparks from Light fixture", "Saw sparks coming from the light fixture in rain."),
+    ("Light shining into bedroom", "Needs a shield, shines directly into homes."),
+    ("Solar Light Battery Dead", "Solar light turns off after 1 hour of darkness."),
+    ("Timer Misconfigured", "Lights turn off at 2 AM leaving street dark till dawn."),
+    ("Vandalized Light Pole", "Access panel has been kicked open."),
+    ("Rusted Pole Base", "Base of the pole is severely corroded."),
+    ("Streetlight wire dangling", "Power wire to the light is hanging low."),
+    ("Light color mismatch", "One blue light in a row of yellow lights."),
+    ("Intermittent outage", "Light works sometimes, then stays off for days."),
+    ("Whole street dark", "Entire row of lights is out, likely a fuse."),
+    ("New Pole needed", "Area is too dark, needs a new installation."),
+    ("Light fell down", "The fixture fell onto the sidewalk."),
+    ("Buzzing Streetlight", "Making a very loud buzzing noise."),
+    ("Light blocked by banner", "Advertisement banner covers the light."),
+    ("Sensor broken", "Light doesn't turn on even when it's pitch black."),
+    ("Old Sodium vapor", "Need to upgrade to LED for better visibility."),
+    ("Dangerous voltage leak", "Pole gives a shock if touched in rain."),
+]
+for p in streetlight_templates: DUMMY_ISSUES.append(create_issue_template(p[0], p[1], "streetlight"))
+
+# 3. Garbage (Target: ~25)
+garbage_templates = [
+    ("Overflowing Dumpster", "Community bin is overflowing onto the street."),
+    ("Missed Trash Pickup", "Truck didn't come this Friday as scheduled."),
+    ("Illegal Dumping site", "People dumping construction waste in empty lot."),
+    ("Dead Animal", "Dead dog on the side of the road needs removal."),
+    ("Litter in Park", "Picnic area covered in plastic plates and bottles."),
+    ("Broken Dustbin", "Public dustbin is smashed and unusable."),
+    ("Burning Plastic", "Toxic smoke from burning garbage pile."),
+    ("Medical Waste found", "Syringes and bandages dumped near river."),
+    ("Restaurant dumping food", "Local eatery dumping rotten food in alley."),
+    ("Recycling pile up", "Recycling sacks haven't been collected in weeks."),
+    ("Trash blocking drain", "Garbage bags are blocking the storm drain."),
+    ("Smell from garbage", "Unbearable stench from rotting waste."),
+    ("Maggot infestation", "Garbage pile has become a breeding ground for flies."),
+    ("Glass on sidewalk", "Broken bottles scattered on the walkway."),
+    ("Scattered Trash", "Dogs have torn open bags, trash everywhere."),
+    ("Construction Debris", "Pile of bricks and sand left on road."),
+    ("Electronic Waste", "Old TVs and monitors dumped in the woods."),
+    ("River bank pollution", "Plastic accumulation on the river bank."),
+    ("Marketplace litter", " vegetable market left huge mess after closing."),
+    ("Hazardous chemical dumping", "Strange drums dumped in the ditch."),
+    ("Dumpster fire risk", "Someone threw hot ash, bin is smoking."),
+    ("No bin availability", "Need a public bin at this busy bus stop."),
+    ("Trash truck spill", "Truck spilled load while turning."),
+    ("Overflowing recycling bin", "Paper and plastic blowing in wind."),
+    ("Sharps hazard", "Needles found in playground sand."),
+]
+for p in garbage_templates: DUMMY_ISSUES.append(create_issue_template(p[0], p[1], "garbage"))
+
+# 4. Water (Target: ~25)
+water_templates = [
+    ("No Water Supply", "Taps are dry for 3 days straight."),
+    ("Burst Main Pipe", "Drinking water pipe burst, flooding road."),
+    ("Dirty/Muddy Water", "Water is dark brown and muddy."),
+    ("Low Pressure", "Water not reaching second floor tank."),
+    ("Leaking Public Tap", "Public standpost running 24/7 wasting water."),
+    ("Contaminated Water", "Water smells like sewage, cross contamination."),
+    ("Broken Valve", "Main supply valve is stuck closed."),
+    ("Water Theft", "Illegal pump connection reducing neighborhood pressure."),
+    ("Meter Leaking", "Water meter is leaking profusely."),
+    ("Tank Overflow", "Community tank overflows every morning."),
+    ("Frozen Pipe", "External pipe burst due to cold."),
+    ("Chlorine smell", "Water has excessive chlorine smell."),
+    ("Worms in water", "Visible worms in tap water, health hazard."),
+    ("Sand in water", "Heavy sediment load in supply."),
+    ("Erratic schedule", "Water comes at 3 AM randomly."),
+    ("Pipe exposed", "PVC pipe exposed to traffic, likely to break."),
+    ("Hydrant Leaking", "Fire hydrant dripping constantly."),
+    ("Water wastage", "Neighbor washing car with open hose for hours."),
+    ("Dry Well", "Community well has gone dry, need alternative."),
+    ("Supply line cut", "Road construction cut the water line."),
+    ("Rusty Water", "Water is orange/red from rusted pipes."),
+    ("Air in pipes", "Taps just sputtering air, meter running."),
+    ("Leak in chaotic pipes", "Spaghetti of pipes leaking everywhere."),
+    ("Manhole full of water", "Water supply valve pit is flooded."),
+    ("Water tanker issue", "Scheduled tanker delivery did not arrive."),
+]
+for p in water_templates: DUMMY_ISSUES.append(create_issue_template(p[0], p[1], "water"))
+
+# 5. Drainage (Target: ~25)
+drainage_templates = [
+    ("Blocked Storm Drain", "Rainwater pooling because drain is choked."),
+    ("Sewage Backflow", "Sewage backing up into house toilets."),
+    ("Open Manhole", "Manhole cover missing, death trap."),
+    ("Broken Manhole Cover", "Cover is cracked and caved in."),
+    ("Foul Odor", "Strong sewer gas smell in the street."),
+    ("Stagnant Water", "Drainage ditch has stagnant water, dengue risk."),
+    ("Overflowing Sewer", "Black water bubbling up from manhole."),
+    ("Drain collapsed", "Current drainage pipe has collapsed underground."),
+    ("Drain clogged with plastic", "Plastic bottles completely blocking flow."),
+    ("Narrow drain capacity", "Drain cannot handle even light rain."),
+    ("Illegal connection to storm drain", "Sewage line connected to rain drain."),
+    ("Drainage cover rattling", "Loose cover makes loud noise when cars pass."),
+    ("Drain cleaning needed", "Silt has filled 90% of the drain."),
+    ("Flooded Basement", "Street drainage leaking into basements."),
+    ("Exposed Drain", "Deep open drain near school needs slab."),
+    ("Drainage outlet blocked", "River level high, blocking outlet."),
+    ("Roots in drain", "Tree roots have invaded and blocked pipe."),
+    ("Oil in drain", "Garage dumping oil into storm drain."),
+    ("Grease clog", "Restaurant grease has solidified and blocked sewer."),
+    ("Drainage pipe leak", "Leaking sewage onto the road."),
+    ("Mosquito breeding ground", "Blocked drain is full of larvae."),
+    ("Drainage construction delayed", "Open pit left for weeks."),
+    ("Manhole hidden", "Paved over manhole, cannot access for cleaning."),
+    ("Sewer rats", "Rats entering homes from broken drain."),
+    ("Chemical smell from drain", "Industrial waste dumped in sewer."),
+]
+for p in drainage_templates: DUMMY_ISSUES.append(create_issue_template(p[0], p[1], "drainage"))
+
+# 6. Road (Target: ~25)
+road_templates = [
+    ("Unpaved Road", "Road is still dirt/mud, impossible in rain."),
+    ("Broken Asphalt", "Top layer of road has peeled off."),
+    ("Speed breaker too high", "Cars scraping bottom on illegal bump."),
+    ("Missing Divider", "Vehicles crossing into oncoming lane."),
+    ("Faded Lane Markings", "Cannot see lanes at night."),
+    ("Crumbling Edge", "Edge of road breaking away into ditch."),
+    ("Slippery Surface", "Oil spill making curve dangerous."),
+    ("Loose Gravel", "Skid hazard for two-wheelers."),
+    ("Narrow Bottleneck", "Road narrows suddenly causing jams."),
+    ("Blind Turn", "Need a convex mirror at this corner."),
+    ("Illegal Parking", "Cars parked on both sides blocking traffic."),
+    ("Construction Material on Road", "Sand/Gravel pile blocking half the road."),
+    ("Uneven surface", "Road is wavy and bumpy."),
+    ("Road sinking", "Section of road settling unevenly."),
+    ("Bridge joint gap", "Gap in bridge expansion joint is too wide."),
+    ("Signage missing", "No entry sign is missing."),
+    ("Wrong way drivers", "Need enforcement or barriers."),
+    ("Pedestrian crossing unsafe", "Zebra crossing needs repainting."),
+    ("Footpath encroached", "Shops displaying goods on sidewalk."),
+    ("Broken Curb", "Concrete curb destroyed by trucks."),
+    ("Road dust", "Excessive dust causing visibility/health issues."),
+    ("Traffic light broken", "Signal stuck on red."),
+    ("Barrier damaged", "Safety barrier on cliff edge crushed."),
+    ("Tree blocking sign", "Stop sign hidden by branches."),
+    ("Cycle lane blocked", "Motorcycles using cycle lane."),
+]
+for p in road_templates: DUMMY_ISSUES.append(create_issue_template(p[0], p[1], "road"))
+
+# 7. Electricity (Target: ~25)
+electricity_templates = [
+    ("Low Voltage", "Appliances not working due to voltage drop."),
+    ("Power Surge", "High voltage damaged TV and Fridge."),
+    ("Wire Sparking", "Service wire sparking at the pole."),
+    ("Loose Connection", "Power flickers when wind blows."),
+    ("Hanging Wires", "Cable spaghetti hanging head high."),
+    ("Pole Bent", "Storm bent the electric pole."),
+    ("Transformer Oil Leak", "Oil dripping from transformer."),
+    ("Fuse Blown", "Phase missing in the neighborhood."),
+    ("Meter Burned", "Electric meter caught fire."),
+    ("Illegal Hooking", "People stealing electricity from main line."),
+    ("Tree on line", "Branch resting on live wire."),
+    ("Power cut unscheduled", "Power out for 10 hours without notice."),
+    ("Live wire on ground", "Snapped wire lying on footpath."),
+    ("Grid failure", "Whole area blacked out."),
+    ("High Tension danger", "House built too close to HT line."),
+    ("Switchgear smoke", "Distribution box smoking."),
+    ("Exposed conductor", "Insulation peeled off wire."),
+    ("Pole interfering with traffic", "Pole in the middle of widened road."),
+    ("Bird nest on transformer", "Risk of short circuit."),
+    ("Humming noise", "Transformer making unbearable noise."),
+    ("Underground cable fault", "Dug up road to fix cable."),
+    ("Meter reading error", "Bill is abnormally high."),
+    ("Voltage fluctuation", "Lights getting bright and dim."),
+    ("Neutral broken", "Causing voltage imbalance."),
+    ("Crowded pole", "Too many telecom wires on electric pole."),
+]
+for p in electricity_templates: DUMMY_ISSUES.append(create_issue_template(p[0], p[1], "electricity"))
+
+# 8. Other (Target: ~25)
+other_templates = [
+    ("Noise Pollution", "Party palace playing loud music till 2 AM."),
+    ("Air Pollution", "Brick kiln smoke blanketing area."),
+    ("Stray Dogs Aggressive", "Pack of dogs chasing kids."),
+    ("Vandalism", "Bus stop glass smashed."),
+    ("Graffiti", "Gang tags on school wall."),
+    ("Encroachment", "Public land captured by private party."),
+    ("Landslide risk", "Hillside eroding near houses."),
+    ("Falling Tree", "Dead tree leaning over playground."),
+    ("Overgrown Vegetation", "Bushes blocking walkway."),
+    ("Snake infestation", "Lots of snakes seen in community park."),
+    ("Public Park neglect", "Swings broken, grass uncut."),
+    ("Unauthorized Billboard", "Huge hoarding blocking view."),
+    ("Beggar nuisance", "Aggressive begging at traffic light."),
+    ("Drunk nuisance", "People drinking in public park."),
+    ("Unsafe building", "Old building looks like it will collapse."),
+    ("Slippery stairs", "Public staircase covered in moss."),
+    ("Missing railing", "Bridge railing stolen."),
+    ("Open construction pit", "Unfenced pit is a hazard."),
+    ("Monkey menace", "Monkeys entering homes and stealing food."),
+    ("Dead birds", "Multiple dead birds found (poison?)."),
+    ("Unauthorized stall", "Food cart blocking fire hydrant."),
+    ("Public Toilet dirty", " unusable condition."),
+    ("Park bench broken", "Nowhere to sit in park."),
+    ("Statue defaced", "Community statue vandalized."),
+    ("Dust storm", "Construction site not wetting dust."),
+]
+for p in other_templates: DUMMY_ISSUES.append(create_issue_template(p[0], p[1], "other"))
+
+
+TARGET_USERS = 10
+TARGET_ISSUES = 200 # Increased as requested
+POOL_BUFFER_RATIO = 1.25
+
+MEDIA_ROOT = "media"
+ISSUE_IMAGES_DIR = os.path.join(MEDIA_ROOT, "issue_images")
+PROFILE_PICS_DIR = os.path.join(MEDIA_ROOT, "profile_pics")
+POOL_DIR = os.path.join(MEDIA_ROOT, "_seed_pool")
+
+DEFAULT_PASSWORD = "asdfghjkl;'"
+VALID_EXT = (".jpg", ".jpeg", ".png", ".webp")
+
+
+# -------------------- ARGUMENT PARSER --------------------
+
+def parse_args():
+    global TARGET_USERS, TARGET_ISSUES
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-u", "--users", type=int)
+    parser.add_argument("-i", "--issues", type=int)
     args = parser.parse_args()
 
-    TARGET_USERS = args.users
-    TARGET_ISSUES = args.issues
+    if args.users:
+        TARGET_USERS = args.users
+    if args.issues:
+        TARGET_ISSUES = args.issues
 
-    print(f"Starting detailed dummy data generation (Target: {TARGET_USERS} Users, {TARGET_ISSUES} Issues)...")
-    
-    # 1. Check Counts FIRST
-    existing_user_count = User.objects.filter(is_superuser=False).count()
-    users_needed = TARGET_USERS - existing_user_count
-    
-    current_issue_count = Issue.objects.count()
-    issues_needed = TARGET_ISSUES - current_issue_count
+# -------------------- UTILITIES --------------------
 
-    # 2. Check for "Broken" Issues (Existing but no images)
-    # This detects if DB has issues but files were lost or not assigned
-    issues_without_images = Issue.objects.annotate(num_images=models.Count('images')).filter(num_images=0)
-    repair_count = issues_without_images.count()
-    
-    should_run_image_logic = issues_needed > 0 or repair_count > 0 or users_needed > 0
-    
-    pooled_images = []
-    
-    if should_run_image_logic:
-        # Move all images to a temporary pool to redistribute
-        # Only do this if we actually intend to write/repair data
-        pool_dir = os.path.join(ISSUE_IMAGES_DIR, '_pool')
-        os.makedirs(pool_dir, exist_ok=True)
-        
-        # Collect from standard dirs (excluding pool)
-        raw_images = collect_all_images(ISSUE_IMAGES_DIR)
-        
-        # ALSO collect from _pool to 'rescue' them if previous runs left them there
-        if os.path.exists(pool_dir):
-            for f in os.listdir(pool_dir):
-                if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
-                    raw_images.append(os.path.join(pool_dir, f))
-        
-        # Deduplicate paths
-        raw_images = list(set(raw_images))
+def ensure_dir(path):
+    os.makedirs(path, exist_ok=True)
 
-        for img_path in raw_images:
-            # Don't move if already in pool and we are just listing it
-            if os.path.dirname(img_path) == pool_dir:
-                pooled_images.append(img_path)
-                continue
-                
-            filename = os.path.basename(img_path)
-            # Avoid overwrite
-            if os.path.exists(os.path.join(pool_dir, filename)):
-                name, ext = os.path.splitext(filename)
-                filename = f"{name}_{random.randint(1000, 9999)}{ext}"
-            
-            dest = os.path.join(pool_dir, filename)
-            try:
-                shutil.move(img_path, dest)
-                pooled_images.append(dest)
-            except Exception as e:
-                print(f"Error moving {img_path}: {e}")
+def safe_filename(path):
+    name, ext = os.path.splitext(os.path.basename(path))
+    return f"{name}_{random.randint(10000,99999)}{ext}"
 
-        # Remove empty directories (cleanup)
-        for root, dirs, files in os.walk(ISSUE_IMAGES_DIR, topdown=False):
-            if root == pool_dir: continue
-            try:
-                os.rmdir(root)
-            except:
-                pass
-                
-        random.shuffle(pooled_images)
-        print(f"Pooled {len(pooled_images)} images for distribution.")
+def random_datetime():
+    now = timezone.now()
+    return now - timezone.timedelta(
+        days=random.randint(0, 365),
+        seconds=random.randint(0, 86400)
+    )
+
+def get_random_nepali_location():
+    """Returns (city_name, address_string, lat, lng) within Nepal city bounds."""
+    city_name = random.choice(list(NEPALI_CITIES.keys()))
+    center_lat, center_lng = NEPALI_CITIES[city_name]
+    
+    # Generate realistic local address string
+    prefix = random.choice(NEPALI_PLACE_PREFIXES) if random.random() < 0.3 else ""
+    place = random.choice(COMMON_PLACE_NAMES)
+    suffix = random.choice(NEPALI_PLACE_SUFFIXES)
+    
+    # Construct address like "New Baneshwor Marg, Kathmandu" or "Thamel, Kathmandu"
+    # We mix it up for variety
+    if random.random() < 0.5:
+        local_part = f"{prefix} {place} {suffix}".strip()
     else:
-        print("Skipping image pooling as no generation/repair needed.")
-
-    # 3. Create Users
-    created_users = []
-    if users_needed <= 0:
-        print(f"User check: Found {existing_user_count} users (Target: {TARGET_USERS}). Skipping creation.")
-        # Only populate list if we might need them for issue generation (repair doesn't need new users)
-        # But reporter logic needs users.
-        created_users = list(User.objects.filter(is_superuser=False)[:TARGET_USERS])
-        if not created_users: # Fallback if no users at all
-             created_users = list(User.objects.all())
-    else:
-        print(f"User check: Found {existing_user_count} users. Creating {users_needed} more...")
-        current_users = list(User.objects.filter(is_superuser=False))
-        created_users.extend(current_users)
+        local_part = f"{place} {suffix}".strip() if random.random() < 0.5 else place
         
-        for i in range(users_needed):
-            name, base_email = DUMMY_USERS[(existing_user_count + i) % len(DUMMY_USERS)]
-            email = f"{base_email.split('@')[0]}_{random.randint(1000, 999)}@{base_email.split('@')[1]}"
-            user = User.objects.create(
-                first_name=name.split()[0],
-                last_name=" ".join(name.split()[1:]),
-                email=email
-            )
-            user.set_password(DEFAULT_PASSWORD)
-            user.save()
-            created_users.append(user)
-            print(f"Created User: {user.email}")
-
-        # Assign profile pics (only if pooling happened)
-        if pooled_images:
-            profile_images = glob.glob(os.path.join(PROFILE_PICS_DIR, 'user_*.*'))
-            for user in created_users:
-                if user.profile_pic: continue
-                specific_pic = next((p for p in profile_images if f"user_{user.id}_" in p), None)
-                if specific_pic:
-                    user.profile_pic = f"profile_pics/{os.path.basename(specific_pic)}"
-                    user.save()
-                elif random.random() > 0.3: 
-                    pic_source = random.choice(pooled_images)
-                    pic_name = f"user_{user.id}_profile_{random.randint(1000,9999)}{os.path.splitext(pic_source)[1]}"
-                    pic_dest = os.path.join(PROFILE_PICS_DIR, pic_name)
-                    shutil.copy(pic_source, pic_dest)
-                    user.profile_pic = f"profile_pics/{pic_name}"
-                    user.save()
-                    print(f"Assigned random profile pic to {user.email}")
-                
-        if users_needed > 0:
-            with open(OUTPUT_FILE, 'w') as f:
-                for user in created_users:
-                    f.write(f"Email: {user.email}\nPassword: {DEFAULT_PASSWORD}\n---\n")
-            print(f"Updated {OUTPUT_FILE}")
-
+    address = f"{local_part}, {city_name}"
     
-    # 4. Generate New Issues
-    current_issue_count = Issue.objects.count() # refresh
+    # Add random jitter to coordinates (approx 2-3km radius)
+    # 0.01 degrees is approx 1.1km
+    lat_jitter = random.uniform(-0.02, 0.02)
+    lng_jitter = random.uniform(-0.02, 0.02)
     
-    if issues_needed > 0:
-        print(f"Issue check: Found {current_issue_count} issues. Generating {issues_needed} more...")
+    final_lat = center_lat + lat_jitter
+    final_lng = center_lng + lng_jitter
+    
+    return city_name, address, final_lat, final_lng
+
+def cast_float_param(val):
+    return float(f"{val:.6f}")
+
+def collect_images(directory):
+    images = []
+    for root, _, files in os.walk(directory):
+        for f in files:
+            if f.lower().endswith(VALID_EXT):
+                images.append(os.path.join(root, f))
+    return images
+
+# -------------------- IMAGE POOL LOGIC --------------------
+
+def expand_pool(pool, required_count):
+    minimum = int(required_count * POOL_BUFFER_RATIO)
+
+    if not pool:
+        raise Exception("No images available to build pool.")
+
+    while len(pool) < minimum:
+        src = random.choice(pool)
+        duplicate = os.path.join(POOL_DIR, safe_filename(src))
+        shutil.copy(src, duplicate)
+        pool.append(duplicate)
+
+    random.shuffle(pool)
+    return pool
+
+def build_issue_pool():
+    ensure_dir(POOL_DIR)
+    base_images = collect_images(ISSUE_IMAGES_DIR)
+
+    if not base_images:
+        # Fallback if no images found, create dummy empty files if needed or raise
+        # For this script we assume images exist or user will provide them.
+        # But to prevent crash if empty:
+       print("WARNING: No issue images found in media/issue_images. Ensure you have some sample images.")
+       return []
+
+    pool = []
+
+    # Copy base images to pool (non-destructive)
+    for img in base_images:
+        dest = os.path.join(POOL_DIR, safe_filename(img))
+        shutil.copy(img, dest)
+        pool.append(dest)
+
+    pool = expand_pool(pool, TARGET_ISSUES)
+
+    print(f"Issue pool ready with {len(pool)} images.")
+    return pool
+
+def build_user_pool(issue_pool):
+    ensure_dir(PROFILE_PICS_DIR)
+
+    user_images = glob.glob(os.path.join(PROFILE_PICS_DIR, "*.*"))
+
+    if not user_images:
+        print("User pool empty → borrowing from issue pool.")
+        user_images = issue_pool.copy() if issue_pool else []
+
+    if not user_images:
+         # Still empty? just return empty, handle gracefully
+         return []
+
+    while len(user_images) < int(TARGET_USERS * POOL_BUFFER_RATIO):
+        user_images.append(random.choice(user_images))
+
+    random.shuffle(user_images)
+    return user_images
+
+# -------------------- USER CREATION --------------------
+
+def create_users():
+    existing = list(User.objects.filter(is_superuser=False))
+    needed = TARGET_USERS - len(existing)
+
+    users = existing.copy()
+
+    for i in range(max(0, needed)):
+        name, email = DUMMY_USERS[i % len(DUMMY_USERS)]
+        email = f"{email.split('@')[0]}_{random.randint(1000,9999)}@{email.split('@')[1]}"
+
+        user = User.objects.create(
+            first_name=name.split()[0],
+            last_name=" ".join(name.split()[1:]),
+            email=email,
+        )
+        user.set_password(DEFAULT_PASSWORD)
+        user.save()
+        users.append(user)
+
+        print(f"Created user: {user.email}")
+
+    return users
+
+def assign_profile_pics(users, pool):
+    if not pool: return
+
+    pool_idx = 0
+    for user in users:
+        if user.profile_pic:
+            continue
+
+        src = pool[pool_idx % len(pool)]
+        pool_idx += 1
         
-        # We need an img_idx tracker
-        img_idx = 0
+        fname = f"user_{user.id}_{safe_filename(src)}"
+        dest = os.path.join(PROFILE_PICS_DIR, fname)
+
+        shutil.copy(src, dest)
+
+        user.profile_pic = f"profile_pics/{fname}"
+        user.save()
+
+# -------------------- ISSUE CREATION --------------------
+
+def get_issue_data(index):
+    base = DUMMY_ISSUES[index % len(DUMMY_ISSUES)]
+    return base
+
+def attach_image_to_issue(issue, image_path):
+    issue_dir = os.path.join(ISSUE_IMAGES_DIR, str(issue.id))
+    ensure_dir(issue_dir)
+    
+    fname = safe_filename(image_path)
+    dest = os.path.join(issue_dir, fname)
+    shutil.copy(image_path, dest)
+    
+    IssueImage.objects.create(
+        issue=issue,
+        image=f"issue_images/{issue.id}/{fname}"
+    )
+
+def generate_issues(users, pool):
+    existing = Issue.objects.count()
+    needed = TARGET_ISSUES - existing
+
+    if needed <= 0:
+        print("No new issues needed.")
+        return
+    
+    created_issues = []
+
+    for i in range(needed):
+        issue_data = get_issue_data(i)
+        reporter = random.choice(users)
         
-        for i in range(issues_needed):
-            issue_data = get_issue_data(i)
-            reporter = random.choice(created_users) if created_users else None
-            
-            if not reporter:
-                print("Error: No users available to report issues.")
-                break
+        is_resolved = random.choice([True, False])
+        is_archived = random.choice([True, False])
+        
+        # Get Nepali location data
+        city, address, lat, lng = get_random_nepali_location()
 
-            base_lat, base_lng = 27.7172, 85.3240
-            lat = base_lat + (random.random() - 0.5) * 0.1
-            lng = base_lng + (random.random() - 0.5) * 0.1
-            is_resolved = random.random() < 0.3 
-            is_archived = random.random() < 0.1 
-            if is_archived: is_resolved = True 
-            
-            issue = Issue.objects.create(
-                title=issue_data['title'],
-                description=issue_data['desc'],
-                category=issue_data['cat'],
-                reported_by=reporter,
-                address=f"{random.randint(1, 999)} {random.choice(['Main St', 'Broadway', 'Park Ave', 'River Rd'])}",
-                city=random.choice(["Townspark", "Metropolis", "Gotham", "Star City"]),
-                latitude=lat,
-                longitude=lng,
-                is_resolved=is_resolved,
-                is_archived=is_archived,
-                created_at=timezone.now() - timezone.timedelta(days=random.randint(0, 365))
-            )
-            if is_resolved:
-                issue.resolved_at = issue.created_at + timezone.timedelta(days=random.randint(1, 10))
-                issue.save()
+        issue = Issue.objects.create(
+            title=issue_data["title"],
+            description=issue_data["desc"],
+            category=issue_data["cat"],
+            reported_by=reporter,
+            address=address,
+            city=city,
+            latitude=cast_float_param(lat),
+            longitude=cast_float_param(lng),
+            created_at=random_datetime(),
+            is_resolved=is_resolved,
+            is_archived=is_archived
+        )
+        created_issues.append(issue)
+        print(f"Created Issue #{issue.id} in {city} (Resolved: {is_resolved})")
 
-            # Assign Images
-            images_for_this_issue = []
-            
-            # 1. Get Primary
-            if img_idx < len(pooled_images):
-                source_image = pooled_images[img_idx]
-                images_for_this_issue.append({'src': source_image, 'move': True})
-                img_idx += 1
-            else:
-                if pooled_images:
-                    source_image = random.choice(pooled_images)
-                    images_for_this_issue.append({'src': source_image, 'move': False})
-                else:
-                    # No pooled images at all?
-                    pass
+    # Image Distribution
+    if not created_issues:
+        return
 
-            # 2. Get Extras
-            if pooled_images:
-                remaining_gen = issues_needed - (i + 1)
-                remaining_imgs = len(pooled_images) - img_idx
-                num_extras = 0
-                if remaining_gen > 0 and (remaining_imgs / remaining_gen) > 1.5:
-                     num_extras = random.randint(1, min(2, remaining_imgs))
-                     use_originals = True
-                elif random.random() < 0.3: 
-                     num_extras = random.randint(1, 2)
-                     use_originals = False
-                
-                for _ in range(num_extras):
-                    if use_originals and img_idx < len(pooled_images):
-                        images_for_this_issue.append({'src': pooled_images[img_idx], 'move': True})
-                        img_idx += 1
-                    elif pooled_images: 
-                        images_for_this_issue.append({'src': random.choice(pooled_images), 'move': False})
+    if not pool:
+        print("Warning: No image pool available to attach images.")
+        return
 
-            # Process Images
-            if images_for_this_issue:
-                issue_img_dir = os.path.join(ISSUE_IMAGES_DIR, str(issue.id))
-                os.makedirs(issue_img_dir, exist_ok=True)
-                images_for_this_issue.sort(key=lambda x: x['move']) 
-                for item in images_for_this_issue:
-                    src_path = item['src']
-                    base_name = os.path.basename(src_path)
-                    try:
-                        if not item['move']:
-                            name, ext = os.path.splitext(base_name)
-                            fname = f"{name}_{random.randint(10000, 99999)}{ext}"
-                            dest_path = os.path.join(issue_img_dir, fname)
-                            if os.path.exists(src_path):
-                                shutil.copy(src_path, dest_path)
-                                IssueImage.objects.create(issue=issue, image=f"issue_images/{issue.id}/{fname}")
-                        else:
-                            fname = base_name
-                            dest_path = os.path.join(issue_img_dir, fname)
-                            if os.path.exists(src_path):
-                                shutil.move(src_path, dest_path)
-                                IssueImage.objects.create(issue=issue, image=f"issue_images/{issue.id}/{fname}")
-                    except Exception as e:
-                        print(f"Error processing image {src_path}: {e}")
-            
-            print(f"Created Issue #{issue.id} [{issue.category}] with {len(images_for_this_issue)} images.")
-    else:
-        print(f"Issue check: Found {current_issue_count} issues (Target: {TARGET_ISSUES}). Skipping new generation.")
-
-    # 5. REPAIR: Assign images to issues that have none
-    if repair_count > 0:
-        print(f"Health Check: Found {repair_count} issues with NO images. Repairing...")
-        if not pooled_images:
-             print("Warning: No images available in pool to repair issues!")
+    print("Distributing images from pool...")
+    for i, image_path in enumerate(pool):
+        if i < len(created_issues):
+            target_issue = created_issues[i]
         else:
-            repaired_count = 0
-            for issue in issues_without_images:
-                # Pick 1 random image (COPY)
-                src = random.choice(pooled_images)
-                
-                issue_img_dir = os.path.join(ISSUE_IMAGES_DIR, str(issue.id))
-                os.makedirs(issue_img_dir, exist_ok=True)
-                
-                base_name = os.path.basename(src)
-                name, ext = os.path.splitext(base_name)
-                fname = f"{name}_repair_{random.randint(10000, 99999)}{ext}"
-                dest_path = os.path.join(issue_img_dir, fname)
-                
-                try:
-                    if os.path.exists(src):
-                        shutil.copy(src, dest_path)
-                        IssueImage.objects.create(issue=issue, image=f"issue_images/{issue.id}/{fname}")
-                        repaired_count += 1
-                except Exception as e:
-                    print(f"Failed to repair issue #{issue.id}: {e}")
-            print(f"Repaired {repaired_count} issues.")
+            target_issue = random.choice(created_issues)
+        
+        attach_image_to_issue(target_issue, image_path)
 
-    # Cleanup pool
-    try:
-        if os.path.exists(pool_dir):
-            if not os.listdir(pool_dir):
-                os.rmdir(pool_dir)
-            else:
-                print(f"Note: {len(os.listdir(pool_dir))} images left unused in pool.")
-    except:
-        pass
+# -------------------- MAIN --------------------
 
-    print(f"Done! Processed checks/generation.")
+def main():
+    parse_args()
 
-if __name__ == '__main__':
+    print(f"Target Users: {TARGET_USERS}")
+    print(f"Target Issues: {TARGET_ISSUES}")
+
+    users = create_users()
+
+    issue_pool = build_issue_pool()
+    user_pool = build_user_pool(issue_pool)
+
+    assign_profile_pics(users, user_pool)
+
+    generate_issues(users, issue_pool)
+
+    print("Seeding completed successfully.")
+
+if __name__ == "__main__":
     main()
