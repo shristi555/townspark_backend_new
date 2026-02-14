@@ -26,16 +26,6 @@ CATEGORIES = [
 
 # Dummy Data Lists - Updated with Nepali names/references
 DUMMY_USERS = [
-    ("Gwen Stacy", "gwen@stacy.com"),
-    ("Rhaenyra Targaryen", "rhaenyra@targaryen.com"),
-    ("Night Fury", "night@fury.com"),
-    ("Bellatrix Lestrange", "bellatrix@lestrange.com"),
-    ("Shristi Stacy", "shristi@stacy.com"),
-    ("Andrew Handsome", "andrew@handsome.com"),
-    ("Tony Stark", "tony@stark.com"),
-    ("Steve Rogers", "steve@rogers.com"),
-    ("Natasha Romanoff", "natasha@romanoff.com"),
-    ("Wanda Maximoff", "wanda@maximoff.com"),
     ("Aarav Sharma", "aarav@sharma.com"),
     ("Sita Patil", "sita@patil.com"),
     ("Rohan Gupta", "rohan@gupta.com"),
@@ -493,6 +483,9 @@ def create_users():
         users.append(user)
 
         print(f"Created user: {user.email}")
+
+        with open("user_details.txt", "a") as f:
+            f.write(f"Email: {user.email},\n Password: {DEFAULT_PASSWORD}\n\n")
 
     return users
 

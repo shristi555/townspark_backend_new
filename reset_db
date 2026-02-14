@@ -3,6 +3,8 @@
 # first remove the sqlite file
 rm -r db.sqlite3
 
+rm -r user_details.txt
+
 # now apply the migrations
 uv run manage.py makemigrations
 uv run manage.py migrate

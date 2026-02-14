@@ -37,6 +37,7 @@ class UniversalSearchView(APIView):
         if search_type in ['all', 'issue']:
             issues = Issue.objects.all().select_related('reported_by').prefetch_related('images', 'likes', 'comments')
             
+            # Apply text search filter
             if query:
                 issues = issues.filter(
                     Q(title__icontains=query) | 
@@ -48,9 +49,11 @@ class UniversalSearchView(APIView):
                     Q(reported_by__last_name__icontains=query)
                 )
 
+            # Apply category filter - use exact match (case-insensitive)
             if category and category != 'all':
-                issues = issues.filter(category__icontains=category)
+                issues = issues.filter(category__iexact=category)
             
+            # Apply date range filters
             if start_date:
                 parsed_start = parse_date(start_date)
                 if parsed_start:
@@ -61,14 +64,16 @@ class UniversalSearchView(APIView):
                 if parsed_end:
                     issues = issues.filter(created_at__date__lte=parsed_end)
             
+            # Apply status filter
             if issue_status:
                 if issue_status == 'resolved':
-                    issues = issues.filter(is_resolved=True)
+                    issues = issues.filter(is_resolved=True, is_archived=False)
                 elif issue_status == 'pending':
                     issues = issues.filter(is_resolved=False, is_archived=False)
                 elif issue_status == 'archived':
                     issues = issues.filter(is_archived=True)
 
+            # Return limited results
             results['issues'] = IssueSearchSerializer(issues[:50], many=True, context={'request': request}).data
 
         # Search People

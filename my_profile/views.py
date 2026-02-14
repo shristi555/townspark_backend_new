@@ -162,6 +162,11 @@ class ExploreFeedView(APIView):
     **Request Parameters:**
     - page: integer (optional, default=1)
     - page_size: integer (optional, default=10)
+    - search: string (optional) - search in title, description, address
+    - category: string (optional) - filter by category
+    - start_date: YYYY-MM-DD (optional) - filter issues created after this date
+    - end_date: YYYY-MM-DD (optional) - filter issues created before this date
+    - ordering: string (optional) - order by field (e.g., '-created_at', 'created_at')
 
     **Response:** Paginated list of issues with basic information
     """
@@ -169,6 +174,9 @@ class ExploreFeedView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from django.db.models import Q
+        from django.utils.dateparse import parse_date
+        
         user = request.user
 
         # Get pagination parameters
@@ -185,8 +193,39 @@ class ExploreFeedView(APIView):
         issues = (
             Issue.objects.exclude(reported_by=user)
             .filter(is_archived=False)
-            .order_by("-created_at")
         )
+
+        # Apply search filter
+        search = request.query_params.get("search", "").strip()
+        if search:
+            issues = issues.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(address__icontains=search) |
+                Q(city__icontains=search)
+            )
+
+        # Apply category filter
+        category = request.query_params.get("category", "").strip()
+        if category:
+            issues = issues.filter(category__iexact=category)
+
+        # Apply date range filters
+        start_date = request.query_params.get("start_date")
+        if start_date:
+            parsed_start = parse_date(start_date)
+            if parsed_start:
+                issues = issues.filter(created_at__date__gte=parsed_start)
+
+        end_date = request.query_params.get("end_date")
+        if end_date:
+            parsed_end = parse_date(end_date)
+            if parsed_end:
+                issues = issues.filter(created_at__date__lte=parsed_end)
+
+        # Apply ordering
+        ordering = request.query_params.get("ordering", "-created_at")
+        issues = issues.order_by(ordering)
 
         # Calculate pagination
         total_count = issues.count()
