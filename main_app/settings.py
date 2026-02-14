@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "django_extensions",
     # Local apps
+    "core",
     "accounts",
     "my_profile",
     "issues",

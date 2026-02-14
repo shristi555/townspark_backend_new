@@ -5,6 +5,33 @@ from accounts.models import User
 
 from django.utils.safestring import mark_safe
 
+from issues.models import Issue
+
+class IssueInline(admin.TabularInline):
+    model = Issue
+    fk_name = "reported_by"
+    extra = 0
+    fields = ["title_display", "category_pill", "resolved_pill", "created_at"]
+    readonly_fields = ["title_display", "category_pill", "resolved_pill", "created_at"]
+    can_delete = False
+    
+    @admin.display(description=_("Title"))
+    def title_display(self, obj):
+        return obj.title
+
+    @admin.display(description=_("Status"))
+    def resolved_pill(self, obj):
+        if obj.is_resolved:
+            return format_html('<span style="padding: 2px 8px; border-radius: 12px; background: #dcfce7; color: #15803d; font-size: 11px; font-weight: bold;">{}</span>', _("Resolved"))
+        return format_html('<span style="padding: 2px 8px; border-radius: 12px; background: #dbeafe; color: #1d4ed8; font-size: 11px; font-weight: bold;">{}</span>', _("Open"))
+
+    @admin.display(description=_("Category"))
+    def category_pill(self, obj):
+        return format_html('<span style="padding: 2px 6px; border-radius: 4px; background: #f3f0ff; color: #6b21a8; font-size: 11px; font-weight: 500;">{}</span>', obj.category.upper() if obj.category else "GENERAL")
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     # Columns shown in the changelist
@@ -22,27 +49,42 @@ class UserAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "is_staff", "is_superuser")
     ordering = ("-created_at",)
 
-    # Restrict editing sensitive fields
-    readonly_fields = ("email", "last_login", "created_at", "profile_pic_tag")
+    # Restrict editing sensitive fields as requested
+    readonly_fields = (
+        "email", 
+        "first_name", 
+        "last_name", 
+        "phone_number",
+        "profile_pic", 
+        "last_login", 
+        "created_at", 
+        "profile_pic_tag",
+        "status_badges",
+        "is_superuser",
+        "groups",
+        "user_permissions"
+    )
     exclude = ("password",)
+
+    # Inlines
+    inlines = [IssueInline]
 
     # Organize fields in the change form
     fieldsets = (
         (_("Identity"), {
             "fields": (
                 "profile_pic_tag",
-                "profile_pic",
                 "email",
                 ("first_name", "last_name"),
                 "phone_number",
+                "profile_pic",
             )
         }),
-        (_("Roles & Permissions"), {
-            "fields": (
-                ("is_active", "is_staff", "is_superuser"),
-                "groups",
-                "user_permissions",
-            ),
+        (_("Account Status"), {
+            "fields": ("status_badges", ("is_active", "is_staff", "is_superuser")),
+        }),
+        (_("Permissions"), {
+            "fields": ("groups", "user_permissions"),
             "classes": ["collapse"],
         }),
         (_("Important Dates"), {

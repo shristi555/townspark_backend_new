@@ -1,37 +1,36 @@
 <fieldset class="module {{ fieldset.classes }}">
     {% if fieldset.name %}<h2>{{ fieldset.name }}</h2>{% endif %}
     {% if fieldset.description %}
-        <div class="description px-8 py-4 bg-slate-50 text-xs text-slate-500 italic">{{ fieldset.description|safe }}</div>
+    <div class="description px-8 py-4 bg-slate-50 text-xs text-slate-500 italic">{{ fieldset.description|safe }}</div>
     {% endif %}
     {% for line in fieldset %}
-        <div class="form-row{% if line.fields|length == 1 and line.errors %} errors{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% endfor %}">
-            {% if line.fields|length == 1 %}
-                {{ line.errors }}
-                <label class="{% if line.fields.0.field.field.required %}required{% endif %}" for="{{ line.fields.0.field.id_for_label }}">
-                    {{ line.fields.0.field.label }}:
-                </label>
-                <div class="flex-1">
-                    {{ line.fields.0.field }}
-                    {% if line.fields.0.field.help_text %}
-                        <div class="help">{{ line.fields.0.field.help_text|safe }}</div>
-                    {% endif %}
+    <div class="form-row border-b border-slate-100 last:border-0 p-6 flex flex-col md:flex-row md:items-start gap-4">
+        {% for field in line %}
+            <div class="flex-1">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="md:w-1/4">
+                        <label class="text-sm font-bold text-slate-600 block pt-2">
+                            {{ field.field.label }}:
+                        </label>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        {% if field.is_readonly %}
+                            <div class="readonly-content font-medium text-slate-900 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
+                                {{ field.contents }}
+                            </div>
+                        {% else %}
+                            <div class="field-input">
+                                {{ field.field }}
+                                {% if field.field.help_text %}
+                                    <p class="help text-xs text-slate-400 mt-1 italic">{{ field.field.help_text|safe }}</p>
+                                {% endif %}
+                                {{ field.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
-            {% else %}
-                <div class="flex flex-wrap gap-8 w-full">
-                    {% for field in line %}
-                        <div class="flex-1 min-w-[200px]">
-                            {{ field.errors }}
-                            <label class="block mb-2 text-sm font-bold text-slate-600 {% if field.field.field.required %}required{% endif %}" for="{{ field.field.id_for_label }}">
-                                {{ field.field.label }}:
-                            </label>
-                            {{ field.field }}
-                            {% if field.field.help_text %}
-                                <div class="help">{{ field.field.help_text|safe }}</div>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
+            </div>
+        {% endfor %}
+    </div>
     {% endfor %}
 </fieldset>
