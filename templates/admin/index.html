@@ -29,6 +29,61 @@
     </div>
   </div>
 
+  <!-- HIGHLIGHTS: Top reporter, top-liked issue, model insights -->
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem;">
+    <div style="flex:2 1 420px; padding:1rem; border-radius:8px; background:#fff; border:1px solid #e9ecef; min-height:120px;">
+      <h3 style="margin-top:0;">Top Reporter</h3>
+      {% if top_reporter %}
+      <div style="display:flex; gap:1rem; align-items:center;">
+        {% if top_reporter.profile_pic %}
+          <img src="{{ top_reporter.profile_pic }}" alt="avatar" style="width:64px;height:64px;border-radius:9999px;object-fit:cover;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        {% else %}
+          <div style="width:64px;height:64px;border-radius:9999px;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;">{{ top_reporter.full_name|default:top_reporter.email|slice:":1"|upper }}</div>
+        {% endif %}
+        <div style="flex:1;">
+          <div style="font-weight:700">{{ top_reporter.full_name|default:top_reporter.email }}</div>
+          <div style="color:#6b7280;font-size:.9rem">{{ top_reporter.email }}</div>
+          <div style="margin-top:.5rem;color:#374151;font-size:.95rem">Reports: <strong>{{ top_reporter.report_count }}</strong></div>
+          {% if top_reporter.last_report %}
+            <div style="margin-top:.25rem;color:#6b7280;font-size:.9rem">Last: <a href="{% url 'admin:issues_issue_change' top_reporter.last_report.id %}">{{ top_reporter.last_report.title }}</a> — {{ top_reporter.last_report.created_at|date:"SHORT_DATETIME_FORMAT" }}</div>
+          {% endif %}
+          <div style="margin-top:.5rem"><a href="{% url 'admin:accounts_user_change' top_reporter.id %}">Open profile in admin</a></div>
+        </div>
+      </div>
+      {% else %}
+        <div style="color:#6b7280">No reporting data available yet.</div>
+      {% endif %}
+    </div>
+
+    <div style="flex:1 1 320px; padding:1rem; border-radius:8px; background:#fff; border:1px solid #e9ecef; min-height:120px;">
+      <h3 style="margin-top:0;">Top Liked Issue</h3>
+      {% if top_liked_issue %}
+        <div style="font-weight:700">#{{ top_liked_issue.id }} — <a href="{% url 'admin:issues_issue_change' top_liked_issue.id %}">{{ top_liked_issue.title }}</a></div>
+        <div style="color:#6b7280;margin-top:.25rem">Likes: <strong>{{ top_liked_issue.like_count }}</strong></div>
+        <div style="color:#6b7280;margin-top:.25rem">Reporter: <a href="{% url 'admin:accounts_user_change' top_liked_issue.reported_by.id %}">{{ top_liked_issue.reported_by.full_name|default:top_liked_issue.reported_by.email }}</a></div>
+      {% else %}
+        <div style="color:#6b7280">No liked issues yet.</div>
+      {% endif %}
+    </div>
+
+    <div style="flex:1 1 320px; padding:1rem; border-radius:8px; background:#fff; border:1px solid #e9ecef; min-height:120px;">
+      <h3 style="margin-top:0;">Model Insights</h3>
+      <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem">
+        <div style="display:flex;justify-content:space-between;color:#374151"><span>Users</span><span>{{ users_total }}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#6b7280;font-size:.9rem"><span>Active / New(30d)</span><span>{{ users_active }} / {{ users_new_30 }}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#374151;margin-top:.25rem"><span>Testimonials</span><span>{{ testimonials_total }}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#6b7280;font-size:.9rem"><span>Avg rating</span><span>{{ testimonials_avg_rating }}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#374151;margin-top:.25rem"><span>Notifications</span><span>{{ notifications_total }}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#6b7280;font-size:.9rem"><span>Unread</span><span>{{ notifications_unread }}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#374151;margin-top:.25rem"><span>Progress updates</span><span>{{ progress_total }}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#6b7280;font-size:.9rem"><span>Avg per issue</span><span>{{ progress_avg_per_issue }}</span></div>
+        {% if top_commented_issue %}
+          <div style="display:flex;justify-content:space-between;color:#374151;margin-top:.25rem"><span>Top commented</span><span><a href="{% url 'admin:issues_issue_change' top_commented_issue.id %}">{{ top_commented_issue.title }}</a> ({{ top_commented_issue.comment_count }})</span></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <div style="display:flex; gap:1rem; flex-wrap:wrap;">
     <div style="flex:2 1 480px; padding:1rem; border-radius:8px; background:#fff; border:1px solid #e9ecef; min-height:220px; position:relative;">
       <h3 style="margin-top:0;">Reporting Trends (last 12 months)</h3>
