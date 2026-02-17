@@ -1,0 +1,120 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}Analytics — {{ site_header|default:_("Django administration") }}{% endblock %}
+
+{% block content %}
+<div class="container" style="margin: 1.5rem 0;">
+  <h1 style="margin-bottom: .25rem;">Analytics Dashboard</h1>
+  <p style="color: #666; margin-bottom: 1rem;">Live metrics from Townspark</p>
+
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem;">
+    <div style="flex:1 1 200px; padding:1rem; border-radius:8px; background:#f8f9fa; border:1px solid #e3e6ea;">
+      <div style="font-size:0.85rem; color:#666">Total Issues</div>
+      <div style="font-weight:700; font-size:1.5rem;">{{ total_issues|default:0 }}</div>
+    </div>
+
+    <div style="flex:1 1 200px; padding:1rem; border-radius:8px; background:#eefaf1; border:1px solid #dfeee0;">
+      <div style="font-size:0.85rem; color:#666">Resolved</div>
+      <div style="font-weight:700; font-size:1.5rem;">{{ total_resolved|default:0 }} <small style="color:#2b6a3a">({{ res_rate|default:0 }}%)</small></div>
+    </div>
+
+    <div style="flex:1 1 200px; padding:1rem; border-radius:8px; background:#fff0f6; border:1px solid #ffe6ef;">
+      <div style="font-size:0.85rem; color:#666">Total Likes</div>
+      <div style="font-weight:700; font-size:1.5rem;">{{ total_likes|default:0 }}</div>
+    </div>
+
+    <div style="flex:1 1 200px; padding:1rem; border-radius:8px; background:#f5f3ff; border:1px solid #eee9ff;">
+      <div style="font-size:0.85rem; color:#666">Total Comments</div>
+      <div style="font-weight:700; font-size:1.5rem;">{{ total_comments|default:0 }}</div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+    <div style="flex:2 1 480px; padding:1rem; border-radius:8px; background:#fff; border:1px solid #e9ecef; min-height:220px; position:relative;">
+      <h3 style="margin-top:0;">Reporting Trends (last 12 months)</h3>
+      <div style="height:160px; width:100%; position:relative;">
+        <canvas id="trendChart" style="width:100% !important; height:100% !important; display:block;"></canvas>
+      </div>
+    </div>
+
+    <div style="flex:1 1 320px; padding:1rem; border-radius:8px; background:#fff; border:1px solid #e9ecef; min-height:220px; position:relative;">
+      <h3 style="margin-top:0;">Issue Categories</h3>
+      <div style="height:160px; width:100%; position:relative;">
+        <canvas id="categoryChart" style="width:100% !important; height:100% !important; display:block;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:1rem; padding:1rem; border-radius:8px; background:#fff; border:1px solid #e9ecef;">
+    <h3 style="margin-top:0;">Performance</h3>
+    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+      <div style="flex:1 1 220px; padding:.5rem; background:#f8f9fa; border-radius:6px;">
+        <div style="font-size:.85rem; color:#666">Avg Resolution Time</div>
+        <div style="font-weight:700">{{ avg_res_time|default:"N/A" }} Days</div>
+      </div>
+      <div style="flex:1 1 220px; padding:.5rem; background:#f8f9fa; border-radius:6px;">
+        <div style="font-size:.85rem; color:#666">Resolution Rate</div>
+        <div style="font-weight:700">{{ res_rate|default:0 }}%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr style="margin:1.75rem 0; border:none; border-top:1px solid #e6e6e6;" />
+
+{# Include the normal admin app/model index below the analytics #}
+<div id="content-main" class="app-list" style="margin-top:1.5rem;">
+  {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+</div>
+
+{% comment %} serialize data for JS charts {% endcomment %}
+{{ trend_values|default:"[]"|json_script:"trend-values" }}
+{{ trend_labels|default:"[]"|json_script:"trend-labels" }}
+{{ category_values|default:"[]"|json_script:"category-values" }}
+{{ category_labels|default:"[]"|json_script:"category-labels" }}
+
+{% block extrahead %}{% endblock %}
+
+<!-- Chart.js from CDN (only on admin index) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  (function () {
+    const trendValues = JSON.parse(document.getElementById('trend-values').textContent || '[]');
+    const trendLabels = JSON.parse(document.getElementById('trend-labels').textContent || '[]');
+    const catValues = JSON.parse(document.getElementById('category-values').textContent || '[]');
+    const catLabels = JSON.parse(document.getElementById('category-labels').textContent || '[]');
+
+    // Line chart
+    const tCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(tCtx, {
+      type: 'line',
+      data: {
+        labels: trendLabels,
+        datasets: [{
+          label: 'Issues',
+          data: trendValues,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37,99,235,0.08)',
+          tension: 0.3,
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // Doughnut chart
+    const cCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(cCtx, {
+      type: 'doughnut',
+      data: {
+        labels: catLabels,
+        datasets: [{
+          data: catValues,
+          backgroundColor: ['#60a5fa', '#34d399', '#f472b6', '#a78bfa', '#f59e0b'],
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  })();
+</script>
+
+{% endblock %}

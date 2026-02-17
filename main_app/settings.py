@@ -111,6 +111,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                # Dashboard analytics for admin templates (Unfold + Jazzmin)
+                "dashboard.context_processors.admin_analytics",
             ],
         },
     },
@@ -206,7 +208,7 @@ UNFOLD = {
     "SITE_HEADER": "TownSpark",
     "SITE_SUBHEADER": "Administration",
     # Theme: "light", "dark" or omit/"auto" to keep the switcher
-    "THEME": "dark",
+    "THEME": "light",
     "BORDER_RADIUS": "8px",
     "SIDEBAR": {
         "show_search": True,
