@@ -1,0 +1,49 @@
+{% extends "unfold/layouts/base_simple.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8 p-4">
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 dark:text-white tracking-tight">Analytics Dashboard</h1>
+        <p class="text-gray-500">Live metrics from the Townspark ecosystem</p>
+    </div>
+
+    <div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {% include "admin/components/stat_card.html" with title="Total Issues" val=total_issues desc="Issues reported" icon="alert_circle" color="text-blue-500" bg="bg-blue-50" %}
+        {% include "admin/components/stat_card.html" with title="Resolved" val=total_resolved desc=res_rate|stringformat:".1f"|add:"% resolution rate" icon="check_circle" color="text-green-500" bg="bg-green-50" %}
+        {% include "admin/components/stat_card.html" with title="Total Likes" val=total_likes desc="Engagement" icon="thumb_up" color="text-pink-500" bg="bg-pink-50" %}
+        {% include "admin/components/stat_card.html" with title="Total Comments" val=total_comments desc="Feedback" icon="chat_bubble" color="text-purple-500" bg="bg-purple-50" %}
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+            <h3 class="font-bold mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-blue-500">trending_up</span> Reporting Trends</h3>
+            {% include "unfold/components/chart/line.html" with data=trend_values labels=trend_labels %}
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+            <h3 class="font-bold mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-purple-500">category</span> Issue Categories</h3>
+            {% include "unfold/components/chart/doughnut.html" with data=category_values labels=category_labels %}
+        </div>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+            <h3 class="font-bold mb-4">Performance Metrics</h3>
+            <div class="space-y-4">
+                <div class="flex justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                    <span class="text-sm font-medium">Avg Resolution Time</span>
+                    <span class="font-bold text-primary-600">{{ avg_res_time }} Days</span>
+                </div>
+                <div class="flex justify-between p-4 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl">
+                    <span class="text-sm font-medium text-green-700 dark:text-green-400">Resolution Rate</span>
+                    <span class="font-bold text-green-600">{{ res_rate }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-12">
+    {{ block.super }}
+</div>
+{% endblock %}

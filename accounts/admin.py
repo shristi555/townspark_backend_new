@@ -1,125 +1,159 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from django.utils.translation import gettext_lazy as _
+from django.urls import reverse
+from django.conf import settings
+from unfold.admin import ModelAdmin
+from unfold.decorators import display
 from accounts.models import User
 
-from django.utils.safestring import mark_safe
 
-from issues.models import Issue
+class UserListMixin:
+    """Handles all logic for the User Table / List View"""
 
-class IssueInline(admin.TabularInline):
-    model = Issue
-    fk_name = "reported_by"
-    extra = 0
-    fields = ["title_display", "category_pill", "resolved_pill", "created_at"]
-    readonly_fields = ["title_display", "category_pill", "resolved_pill", "created_at"]
-    can_delete = False
-    
-    @admin.display(description=_("Title"))
-    def title_display(self, obj):
-        return obj.title
-
-    @admin.display(description=_("Status"))
-    def resolved_pill(self, obj):
-        if obj.is_resolved:
-            return format_html('<span style="padding: 2px 8px; border-radius: 12px; background: #dcfce7; color: #15803d; font-size: 11px; font-weight: bold;">{}</span>', _("Resolved"))
-        return format_html('<span style="padding: 2px 8px; border-radius: 12px; background: #dbeafe; color: #1d4ed8; font-size: 11px; font-weight: bold;">{}</span>', _("Open"))
-
-    @admin.display(description=_("Category"))
-    def category_pill(self, obj):
-        return format_html('<span style="padding: 2px 6px; border-radius: 4px; background: #f3f0ff; color: #6b21a8; font-size: 11px; font-weight: 500;">{}</span>', obj.category.upper() if obj.category else "GENERAL")
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-@admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    # Columns shown in the changelist
-    list_display = (
-        "id",
-        "profile_pic_tag",
-        "email",
-        "full_name_display",
-        "phone_number",
-        "status_badges",
+    list_display = [
+        "display_header",
+        "display_phone",
+        "display_status",
         "created_at",
-    )
+        "display_actions",
+    ]
 
-    search_fields = ("email", "first_name", "last_name", "phone_number")
-    list_filter = ("is_active", "is_staff", "is_superuser")
-    ordering = ("-created_at",)
+    empty_value_display = "--"
 
-    # Restrict editing sensitive fields as requested
-    readonly_fields = (
-        "email", 
-        "first_name", 
-        "last_name", 
-        "phone_number",
-        "profile_pic", 
-        "last_login", 
-        "created_at", 
-        "profile_pic_tag",
-        "status_badges",
-        "is_superuser",
-        "groups",
-        "user_permissions"
-    )
-    exclude = ("password",)
+    @display(description="User", header=False)  # Changed to False to take full control
+    def display_header(self, instance):
+        full_name = instance.get_full_name() or "No Name"
 
-    # Inlines
-    inlines = [IssueInline]
-
-    # Organize fields in the change form
-    fieldsets = (
-        (_("Identity"), {
-            "fields": (
-                "profile_pic_tag",
-                "email",
-                ("first_name", "last_name"),
-                "phone_number",
-                "profile_pic",
+        # 1. Create the Avatar (Image or Initials)
+        if instance.profile_pic:
+            # THere is  need to display the initials for some days in this server
+            # i will revert to img in future
+            avatar_html = format_html(
+                '<div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-xs p-2">{}</div>',
+                instance.initials,
             )
-        }),
-        (_("Account Status"), {
-            "fields": ("status_badges", ("is_active", "is_staff", "is_superuser")),
-        }),
-        (_("Permissions"), {
-            "fields": ("groups", "user_permissions"),
-            "classes": ["collapse"],
-        }),
-        (_("Important Dates"), {
-            "fields": (("last_login", "created_at"),),
-            "classes": ["collapse"],
-        }),
-    )
-
-    @admin.display(description=_("Full Name"))
-    def full_name_display(self, obj):
-        return f"{obj.first_name} {obj.last_name or ''}".strip() or "---"
-
-    @admin.display(description=_("Status"))
-    def status_badges(self, obj):
-        badges = []
-        if obj.is_superuser:
-            badges.append('<span style="padding: 2px 6px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 10px; font-weight: bold; margin-right: 4px;">SUPERUSER</span>')
-        elif obj.is_staff:
-            badges.append('<span style="padding: 2px 6px; border-radius: 10px; background: #dbeafe; color: #1e40af; font-size: 10px; font-weight: bold; margin-right: 4px;">STAFF</span>')
-        
-        if obj.is_active:
-            badges.append('<span style="padding: 2px 6px; border-radius: 10px; background: #dcfce7; color: #166534; font-size: 10px; font-weight: bold;">ACTIVE</span>')
         else:
-            badges.append('<span style="padding: 2px 6px; border-radius: 10px; background: #f3f4f6; color: #374151; font-size: 10px; font-weight: bold;">INACTIVE</span>')
-        
-        return format_html('<div style="display: flex;">{}</div>', mark_safe("".join(badges)))
-
-    @admin.display(description=_("Profile"))
-    def profile_pic_tag(self, obj):
-        if obj.profile_pic:
-            return format_html(
-                '<img src="{}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;" />',
-                obj.profile_pic.url,
+            initials = (
+                instance.first_name[0] if instance.first_name else instance.email[0]
+            ).upper()
+            avatar_html = format_html(
+                '<div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-xs">{}</div>',
+                initials,
             )
+
+        # 2. Return a SINGLE format_html block.
+        # This bypasses Unfold's "list of 3" requirement and guarantees it looks like a modern row.
         return format_html(
-            '<div style="width: 40px; height: 40px; border-radius: 50%; background: #ddd6fe; display: flex; align-items: center; justify-content: center; color: #5b21b6; font-weight: bold;">{}</div>',
-            obj.first_name[0].upper() if obj.first_name else "?"
+            '<div class="flex items-center gap-x-3 text-left">'
+            "   {}"
+            '   <div class="flex flex-col">'
+            '       <span class="font-semibold text-gray-900 dark:text-gray-100 text-sm">{}</span>'
+            '       <span class="text-xs text-gray-500 font-normal">{}</span>'
+            "   </div>"
+            "</div>",
+            avatar_html,
+            full_name,
+            instance.email,
         )
+
+    # ... keep the rest of your display_status, display_phone, and display_actions ...
+    @display(description="Status", label={True: "success", False: "danger"})
+    def display_status(self, instance):
+        return instance.is_active, "Active" if instance.is_active else "Inactive"
+
+    @display(description="Phone Number")
+    def display_phone(self, instance):
+        return instance.phone_number or "--"
+
+    @display(description="Actions")
+    def display_actions(self, instance):
+        change_url = reverse("admin:accounts_user_change", args=[instance.pk])
+        return format_html(
+            '<div class="flex items-center gap-x-3">'
+            '<a href="{}" class="text-gray-400 hover:text-primary-600 transition-colors">'
+            '<span class="material-symbols-outlined !text-xl">edit</span></a>'
+            '<a href="{}" class="text-gray-400 hover:text-blue-500 transition-colors">'
+            '<span class="material-symbols-outlined !text-xl">visibility</span></a>'
+            "</div>",
+            change_url,
+            change_url,
+        )
+
+
+class UserEditMixin:
+    """Handles all logic for the User Change Form / Profile View"""
+
+    def display_profile_header(self, instance):
+        if not instance.pk:
+            return "New User Profile"
+
+        # Big Profile Header UI
+        if instance.profile_pic:
+            img_tag = format_html(
+                '<img src="{}" class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg" />',
+                instance.profile_pic_absolute_url,
+            )
+        else:
+            img_tag = format_html(
+                '<div class="w-32 h-32 rounded-full bg-primary-600 text-white flex items-center justify-center text-4xl font-bold shadow-lg">{}</div>',
+                instance.initials,
+            )
+
+        return format_html(
+            '<div class="flex flex-col items-center justify-center w-full py-10 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 mb-8">'
+            '   <div class="relative group">{}'
+            '       <div class="absolute inset-0 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">'
+            '           <span class="material-symbols-outlined text-white text-3xl">photo_camera</span>'
+            "       </div>"
+            "   </div>"
+            '   <h2 class="mt-4 text-2xl font-bold text-gray-900 dark:text-white">{}</h2>'
+            '   <p class="text-sm text-gray-500 font-medium">{}</p>'
+            "</div>",
+            img_tag,
+            instance.get_full_name() or "New User",
+            f"Member since {instance.created_at.strftime('%B %Y')}"
+            if instance.created_at
+            else "Account pending",
+        )
+
+    display_profile_header.short_description = "Profile Overview"
+
+
+# ==========================================
+# 3. FINAL ADMIN ASSEMBLY
+# ==========================================
+@admin.register(User)
+class UserAdmin(UserListMixin, UserEditMixin, ModelAdmin):
+    """
+    Modular User Admin inheriting List and Edit Mixins.
+    """
+
+    # Define which fields are read-only in the edit form
+    readonly_fields = ["display_profile_header", "password", "created_at"]
+
+    # Define the actual form layout
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": ["display_profile_header", "profile_pic"],
+            },
+        ),
+        (
+            "Identity Info",
+            {
+                "fields": (("first_name", "last_name"), "email", "phone_number"),
+            },
+        ),
+        (
+            "Access Roles",
+            {
+                "fields": ("is_active", "is_staff", "is_superuser"),
+                "description": "Control user status and administrative access.",
+            },
+        ),
+    )
+
+    # Optional: ensure we can still search and filter
+    search_fields = ("email", "first_name", "last_name")
+    list_filter = ("is_active", "is_staff")

@@ -52,6 +52,23 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name"]
 
+    @property
+    def initials(self):
+        if self.first_name and self.last_name:
+            return f"{self.first_name[0]}{self.last_name[0]}".upper()
+        elif self.first_name:
+            return self.first_name[0].upper()
+        elif self.email:
+            return self.email[0].upper()
+        else:
+            return "--"  # Default initial if no name or email is available
+
+    @property
+    def profile_pic_absolute_url(self):
+        if self.profile_pic:
+            return self.profile_pic.url
+        return None
+
     # a username property for compatibility with some django packages
     @property
     def username(self):

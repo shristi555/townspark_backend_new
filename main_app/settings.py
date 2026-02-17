@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os.path
 from datetime import timedelta
 from pathlib import Path
+from django.templatetags.static import static
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -54,6 +57,10 @@ LOGGING = {
 # Application definition
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
+    "unfold.contrib.inlines",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -193,4 +200,62 @@ USE_I18N = True
 USE_TZ = True
 STATIC_URL = "static/"
 
-
+# Unfold (modern Django admin theme) configuration
+UNFOLD = {
+    "SITE_TITLE": "TownSpark — Admin",
+    "SITE_HEADER": "TownSpark",
+    "SITE_SUBHEADER": "Administration",
+    # Theme: "light", "dark" or omit/"auto" to keep the switcher
+    "THEME": "dark",
+    "BORDER_RADIUS": "8px",
+    "SIDEBAR": {
+        "show_search": True,
+        "command_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": _("Navigation"),
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": "Dashboard",
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                    {
+                        "title": "Users",
+                        "icon": "people",
+                        "link": reverse_lazy("admin:accounts_user_changelist"),
+                    },
+                    {
+                        "title": "Issues",
+                        "icon": "report_problem",
+                        "link": reverse_lazy("admin:issues_issue_changelist"),
+                    },
+                    {
+                        "title": "Notifications",
+                        "icon": "notifications",
+                        "link": reverse_lazy(
+                            "admin:notification_notification_changelist"
+                        ),
+                    },
+                    {
+                        "title": "Testimonials",
+                        "icon": "rate_review",
+                        "link": reverse_lazy(
+                            "admin:testimonial_testimonial_changelist"
+                        ),
+                    },
+                ],
+            },
+        ],
+    },
+    # Optional custom CSS/JS (place files under static/ if you add them)
+    "STYLES": [
+        lambda request: static("css/admin-overrides.css"),
+        lambda request: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined",
+    ],
+    "SCRIPTS": [],
+    "DASHBOARD_CALLBACK": "dashboard.utils.get_analytics_data",
+}
