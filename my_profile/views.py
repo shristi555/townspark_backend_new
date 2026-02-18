@@ -330,15 +330,15 @@ class AnalyticsView(APIView):
 
         # Engagement rate (average likes + comments per issue)
         avg_likes_per_issue = (
-            all_issues.annotate(like_count=Count("likes")).aggregate(
-                avg=Avg("like_count")
+            all_issues.annotate(_like_count=Count("likes")).aggregate(
+                avg=Avg("_like_count")
             )["avg"]
             or 0
         )
 
         avg_comments_per_issue = (
-            all_issues.annotate(comment_count=Count("comments")).aggregate(
-                avg=Avg("comment_count")
+            all_issues.annotate(_comment_count=Count("comments")).aggregate(
+                avg=Avg("_comment_count")
             )["avg"]
             or 0
         )

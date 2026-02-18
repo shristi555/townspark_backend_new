@@ -98,9 +98,9 @@ def get_analytics_data(request, context):
 
     # Top liked issue (only if there are likes)
     top_liked_issue_obj = (
-        Issue.objects.annotate(like_count=Count("likes"))
-        .filter(like_count__gt=0)
-        .order_by("-like_count")
+        Issue.objects.annotate(_like_count=Count("likes"))
+        .filter(_like_count__gt=0)
+        .order_by("-_like_count")
         .first()
     )
     top_liked_issue = None
@@ -108,7 +108,7 @@ def get_analytics_data(request, context):
         top_liked_issue = {
             "id": top_liked_issue_obj.id,
             "title": top_liked_issue_obj.title,
-            "like_count": getattr(top_liked_issue_obj, "like_count", 0),
+            "like_count": getattr(top_liked_issue_obj, "_like_count", getattr(top_liked_issue_obj, "like_count", 0)),
             "reported_by": {
                 "id": top_liked_issue_obj.reported_by.id,
                 "email": top_liked_issue_obj.reported_by.email,
@@ -142,9 +142,9 @@ def get_analytics_data(request, context):
     )
 
     top_commented_issue_obj = (
-        Issue.objects.annotate(comment_count=Count("comments"))
-        .filter(comment_count__gt=0)
-        .order_by("-comment_count")
+        Issue.objects.annotate(_comment_count=Count("comments"))
+        .filter(_comment_count__gt=0)
+        .order_by("-_comment_count")
         .first()
     )
     top_commented_issue = None
@@ -152,7 +152,7 @@ def get_analytics_data(request, context):
         top_commented_issue = {
             "id": top_commented_issue_obj.id,
             "title": top_commented_issue_obj.title,
-            "comment_count": getattr(top_commented_issue_obj, "comment_count", 0),
+            "comment_count": getattr(top_commented_issue_obj, "_comment_count", getattr(top_commented_issue_obj, "comment_count", 0)),
         }
 
     # Basic totals already present in previous version
