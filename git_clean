@@ -1,8 +1,11 @@
-git filter-branch -f --env-filter '
+# Filter each branch individually
+for branch in $(git branch -r | grep -v HEAD); do
+  git filter-branch -f --env-filter '
 export GIT_AUTHOR_NAME="shristi555"
 export GIT_AUTHOR_EMAIL="shreesti500@gmail.com"
 export GIT_COMMITTER_NAME="shristi555"
 export GIT_COMMITTER_EMAIL="shreesti500@gmail.com"
-' --tag-name-filter cat -- --branches --tags
+' --tag-name-filter cat -- "$branch"
+done
 
 git push --force --all
